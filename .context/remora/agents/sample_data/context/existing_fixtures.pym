@@ -1,0 +1,36 @@
+from grail import Input, external
+
+noop: bool = Input("noop", default=False)
+
+_ = noop
+
+
+@external
+async def list_dir(path: str = ".") -> list[str]:
+    """List file names in a directory."""
+    ...
+
+
+@external
+async def file_exists(path: str) -> bool:
+    """Check if a file or directory exists."""
+    ...
+
+
+async def _safe_list_dir(path: str) -> list[str]:
+    try:
+        return await list_dir(path=path)
+    except Exception:
+        return []
+
+
+fixtures_dir = "fixtures"
+fixtures: list[dict[str, str]] = []
+
+if await file_exists(path=fixtures_dir):
+    entries = await _safe_list_dir(path=fixtures_dir)
+    for name in sorted(entries):
+        fixtures.append({"name": name, "path": f"{fixtures_dir}/{name}"})
+
+result = fixtures
+result

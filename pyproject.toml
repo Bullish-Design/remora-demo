@@ -3,7 +3,7 @@ name = "remora-demo"
 version = "0.1.0"
 description = "A Python project template with modern tooling."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 license = { text = "MIT" }
 
 authors = [
@@ -12,15 +12,34 @@ authors = [
 
 dependencies = [
   "pydantic>=2.12.5",
+  #"remora[frontend]",
+  "stario",
+  "aiohttp",
 ]
 
+[project.scripts]
+remora-demo = "remora_demo.main:main"
+remora-frontend = "remora_demo.frontend.main:main"
+
 [project.optional-dependencies]
+#frontend = [
+#  "remora[frontend]",
+#]
 dev = [
   "pytest>=7.0",
   "pytest-cov>=4.1",
   "mypy>=1.10",
   "ruff>=0.5.0",
 ]
+
+[tool.uv.sources]
+remora = { git = "https://github.com/Bullish-Design/remora.git" }
+#fsdantic = { git = "https://github.com/Bullish-Design/fsdantic.git" }
+#grail = { git = "https://github.com/Bullish-Design/grail.git" }
+#cairn = { git = "https://github.com/Bullish-Design/cairn.git" }
+#structured-agents = { git = "https://github.com/Bullish-Design/structured-agents.git" }
+
+
 
 #[project.urls]
 #homepage = "https://github.com/Bullish-Design/template-py"
@@ -45,6 +64,9 @@ include = [
 ]
 
 [tool.uv]
+python-downloads = "automatic"
+prerelease = "allow"
+
 # Keep the default behavior; this section is here so you can extend it later if needed.
 
 [tool.pytest.ini_options]
@@ -52,8 +74,8 @@ addopts = "-q --cov=embeddify --cov-report=term-missing"
 testpaths = ["tests"]
 
 [tool.mypy]
-python_version = "3.13"
-packages = ["src/template_py"]
+python_version = "3.14"
+packages = ["remora_demo"]
 strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
@@ -65,7 +87,7 @@ no_implicit_optional = true
 
 [tool.ruff]
 line-length = 120
-target-version = "py313"
+target-version = "py314"
 src = ["src"]
 
 [tool.ruff.lint]

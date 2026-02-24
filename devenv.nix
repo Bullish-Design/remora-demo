@@ -15,7 +15,7 @@
   languages = {
       python = {
           enable = true;
-          version = "3.13";
+          version = "3.14";
           venv.enable = true;
           uv.enable = true;
         };
