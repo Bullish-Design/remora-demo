@@ -56,6 +56,7 @@ def home_view() -> Html:
                         "graphId": "",
                         "bundle": "default",
                         "target": "",
+                        "targetPath": "",
                     },
                 },
                 ifmissing=True,
@@ -101,6 +102,13 @@ def home_view() -> Html:
                                     "data-bind": "graphLauncher.target",
                                 }
                             ),
+                            Input(
+                                {
+                                    "type": "text",
+                                    "placeholder": "Target file path (optional)",
+                                    "data-bind": "graphLauncher.targetPath",
+                                }
+                            ),
                             Button(
                                 {
                                     "type": "button",
@@ -118,6 +126,10 @@ def home_view() -> Html:
                                     const targetValue = $graphLauncher?.target?.trim();
                                     if (targetValue) {
                                         payload.target = targetValue;
+                                    }
+                                    const targetPathValue = $graphLauncher?.targetPath?.trim();
+                                    if (targetPathValue) {
+                                        payload.target_path = targetPathValue;
                                     }
                                     @post('/graph/execute', payload);
                                     $graphLauncher.graphId = '';

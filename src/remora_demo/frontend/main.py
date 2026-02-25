@@ -37,7 +37,8 @@ class RespondSignals:
 
 async def home(c: Context, w: Writer) -> None:
     """Serve the SPA."""
-    w.html(render_home())
+    html_content = render_home()
+    w.respond(html_content.encode(), b"text/html; charset=utf-8", 200)
 
 
 async def subscribe(c: Context, w: Writer) -> None:
