@@ -5,7 +5,7 @@ These views must match the hub's dashboard_view structure for Datastar
 to correctly morph DOM elements by ID.
 """
 
-from stario import at, data
+from stario import asset, at, data
 from stario.html import (
     Body,
     Button,
@@ -15,6 +15,7 @@ from stario.html import (
     Input,
     Link,
     Meta,
+    SafeString,
     Script,
     Title,
     render,
@@ -34,11 +35,11 @@ def home_view() -> Html:
             Meta({"charset": "UTF-8"}),
             Meta({"name": "viewport", "content": "width=device-width, initial-scale=1.0"}),
             Title("Remora Dashboard"),
-            Link({"rel": "stylesheet", "href": "/static/css/style.css"}),
+            Link({"rel": "stylesheet", "href": "/static/" + asset("css/style.css")}),
             Script(
                 {
                     "type": "module",
-                    "src": "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0-RC.7/bundles/datastar.js",
+                    "src": "/static/" + asset("js/datastar.js"),
                 }
             ),
         ),
@@ -57,9 +58,11 @@ def home_view() -> Html:
                         "bundle": "default",
                         "target": "",
                         "targetPath": "",
+                        "filePickerOpen": False,
+                        "filePickerPath": "",
+                        "filePickerError": "",
                     },
                 },
-                ifmissing=True,
             ),
             data.init(at.get("/subscribe")),
             Div(
@@ -102,17 +105,17 @@ def home_view() -> Html:
                                     "data-bind": "graphLauncher.target",
                                 }
                             ),
-                            Input(
-                                {
-                                    "type": "text",
-                                    "placeholder": "Target file path (optional)",
-                                    "data-bind": "graphLauncher.targetPath",
-                                }
-                            ),
+                            SafeString(f"""
+                            <div class="form-group input-with-button">
+                                <input type="text" placeholder="Target file path (optional)" data-bind="graphLauncher.targetPath">
+                                <button type="button" class="btn" 
+                                    data-on-click="$graphLauncher.filePickerOpen = true; $graphLauncher.filePickerPath = ''; @get('/api/files');">
+                                    Browse
+                                </button>
+                            </div>"""),
                             Button(
                                 {
                                     "type": "button",
-                                    "data-on": "click",
                                     "data-on-click": """
                                     const graphId = $graphLauncher?.graphId?.trim();
                                     if (!graphId) {
@@ -159,6 +162,30 @@ def home_view() -> Html:
                         Div({}, "Graph Execution"),
                         Div({"id": "execution-progress"}, "No execution"),
                     ),
+                    SafeString(f"""
+                    <div id="file-picker" class="modal-overlay" data-show="$graphLauncher.filePickerOpen">
+                        <div class="modal-content card">
+                            <div class="modal-header">Select File</div>
+                            <div class="error-message" data-text="$graphLauncher.filePickerError"></div>
+                            <div class="path-display">
+                                Path: <span data-text="$graphLauncher.filePickerPath || '/'"></span>
+                            </div>
+                            <div class="nav-buttons">
+                                <button type="button" class="btn btn-small"
+                                    data-show="$graphLauncher.filePickerPath !== ''"
+                                    data-on-click="const parts = $graphLauncher.filePickerPath.split('/'); parts.pop(); @get('/api/files?path=' + parts.join('/'));">
+                                    ⬆ Up
+                                </button>
+                            </div>
+                            <div id="file-picker-list" class="file-list"></div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn"
+                                    data-on-click="$graphLauncher.filePickerOpen = false">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>"""),
                 ),
             ),
         ),
