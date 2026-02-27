@@ -1,63 +1,28 @@
-# Remora configuration example
-# Copy to remora.yaml and adjust as needed.
+bundles:
+  path: agents
+  mapping:
+    function: lint/bundle.yaml
+    class: docstring/bundle.yaml
+    method: docstring/bundle.yaml
+    file: lint/bundle.yaml
 
 discovery:
-  language: python
-  query_pack: remora_core
+  paths: ["src/"]
+  languages: ["python"]
+  max_workers: 4
 
-agents_dir: agents
-
-# vLLM server on your Tailscale network
-server:
+model:
   base_url: "http://remora-server:8000/v1"
   api_key: "EMPTY"
-  timeout: 120
-  default_adapter: "Qwen/Qwen3-4B-Instruct-2507-FP8"
+  default_model: "Qwen/Qwen3-4B"
 
-operations:
-  lint:
-    enabled: true
-    auto_accept: false
-    subagent: lint
-    # model_id here is the LoRA adapter name on the server
-    # omit to use server.default_adapter
-    # model_id: "lint"
-
-  test:
-    enabled: true
-    auto_accept: false
-    subagent: test
-
-  docstring:
-    enabled: true
-    auto_accept: false
-    subagent: docstring
-    style: google
-
-  sample_data:
-    enabled: false
-    auto_accept: false
-    subagent: sample_data
-
-runner:
-  max_turns: 20
-  max_tokens: 4096
-  temperature: 0.1
-  tool_choice: "auto"  # "required" | "auto" | "none"
-  max_history_messages: 50
-
-cairn:
-  command: cairn
-  home: null
-  max_concurrent_agents: 16
+execution:
+  max_concurrency: 4
+  error_policy: skip_downstream
   timeout: 300
+  max_turns: 8
+  truncation_limit: 1024
 
-event_stream:
-  enabled: true
-  include_payloads: true
-  max_payload_chars: 40000
-
-llm_log:
-  enabled: true
-  output: .remora_cache/llm_conversations.log
-  include_full_prompts: false
+workspace:
+  base_path: ".remora/workspaces"
+  cleanup_after: "1h"

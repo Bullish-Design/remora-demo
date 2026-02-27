@@ -109,14 +109,14 @@ def home_view() -> Html:
                             <div class="form-group input-with-button">
                                 <input type="text" placeholder="Target file path (optional)" data-bind="graphLauncher.targetPath">
                                 <button type="button" class="btn" 
-                                    data-on-click="$graphLauncher.filePickerOpen = true; $graphLauncher.filePickerPath = ''; @get('/api/files');">
+                                    data-on:click="$graphLauncher.filePickerOpen = true; $graphLauncher.filePickerPath = ''; @get('/api/files');">
                                     Browse
                                 </button>
                             </div>"""),
                             Button(
                                 {
                                     "type": "button",
-                                    "data-on-click": """
+                                    "data-on:click": """
                                     const graphId = $graphLauncher?.graphId?.trim();
                                     if (!graphId) {
                                         alert('Graph ID is required to launch a graph.');
@@ -163,7 +163,7 @@ def home_view() -> Html:
                         Div({"id": "execution-progress"}, "No execution"),
                     ),
                     SafeString(f"""
-                    <div id="file-picker" class="modal-overlay" data-show="$graphLauncher.filePickerOpen">
+                    <div id="file-picker" class="modal-overlay" data-show="$graphLauncher.filePickerOpen" style="display: none">
                         <div class="modal-content card">
                             <div class="modal-header">Select File</div>
                             <div class="error-message" data-text="$graphLauncher.filePickerError"></div>
@@ -173,14 +173,14 @@ def home_view() -> Html:
                             <div class="nav-buttons">
                                 <button type="button" class="btn btn-small"
                                     data-show="$graphLauncher.filePickerPath !== ''"
-                                    data-on-click="const parts = $graphLauncher.filePickerPath.split('/'); parts.pop(); @get('/api/files?path=' + parts.join('/'));">
+                                    data-on:click="const parts = $graphLauncher.filePickerPath.split('/'); parts.pop(); @get('/api/files?path=' + parts.join('/'));">
                                     ⬆ Up
                                 </button>
                             </div>
                             <div id="file-picker-list" class="file-list"></div>
                             <div class="modal-footer">
                                 <button type="button" class="btn"
-                                    data-on-click="$graphLauncher.filePickerOpen = false">
+                                    data-on:click="$graphLauncher.filePickerOpen = false">
                                     Cancel
                                 </button>
                             </div>

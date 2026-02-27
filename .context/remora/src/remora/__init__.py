@@ -1,21 +1,140 @@
-"""Remora V2 - Simple, elegant agent graph workflows."""
+"""Remora public API surface."""
 
-from remora.agent_graph import AgentGraph, GraphConfig
-from remora.config import RemoraConfig
-from remora.discovery import CSTNode, TreeSitterDiscoverer
-from remora.event_bus import Event, EventBus, get_event_bus
-from remora.workspace import GraphWorkspace, WorkspaceKV, WorkspaceManager
+from remora.core.cairn_bridge import CairnWorkspaceService, SyncMode
+from remora.core.cairn_externals import CairnExternals
+from remora.core.checkpoint import CheckpointManager
+from remora.core.config import (
+    BundleConfig,
+    ConfigError,
+    DiscoveryConfig,
+    ErrorPolicy,
+    ExecutionConfig,
+    IndexerConfig,
+    ModelConfig,
+    RemoraConfig,
+    WorkspaceConfig,
+    load_config,
+    serialize_config,
+)
+from remora.core.container import RemoraContainer, ScopedContainer
+from remora.core.context import ContextBuilder, RecentAction
+from remora.core.discovery import (
+    CSTNode,
+    LANGUAGE_EXTENSIONS,
+    NodeType,
+    TreeSitterDiscoverer,
+    compute_node_id,
+    discover,
+)
+from remora.core.errors import (
+    CheckpointError,
+    DiscoveryError,
+    ExecutionError,
+    GraphError,
+    RemoraError,
+    WorkspaceError,
+)
+from remora.core.event_bus import EventBus, EventHandler
+from remora.core.event_store import EventSourcedBus, EventStore
+from remora.core.events import (
+    AgentCompleteEvent,
+    AgentErrorEvent,
+    AgentSkippedEvent,
+    AgentStartEvent,
+    CheckpointRestoredEvent,
+    CheckpointSavedEvent,
+    GraphCompleteEvent,
+    GraphErrorEvent,
+    GraphStartEvent,
+    HumanInputRequestEvent,
+    HumanInputResponseEvent,
+    KernelEndEvent,
+    KernelStartEvent,
+    ModelRequestEvent,
+    ModelResponseEvent,
+    RemoraEvent,
+    ToolCallEvent,
+    ToolResultEvent,
+    TurnCompleteEvent,
+)
+from remora.core.executor import AgentState, ExecutorState, GraphExecutor, ResultSummary
+from remora.core.graph import AgentNode, build_graph, get_execution_batches
+from remora.core.streaming_sync import FileWatcher, StreamingSyncManager, SyncStats
+from remora.core.tools import RemoraGrailTool, build_virtual_fs, discover_grail_tools
+from remora.core.workspace import AgentWorkspace, CairnDataProvider, CairnResultHandler, WorkspaceManager
+from remora.utils import PathResolver
 
 __all__ = [
-    "AgentGraph",
-    "GraphConfig",
-    "get_event_bus",
-    "EventBus",
-    "Event",
-    "CSTNode",
-    "TreeSitterDiscoverer",
+    "CheckpointError",
+    "ConfigError",
+    "DiscoveryError",
+    "ExecutionError",
+    "GraphError",
+    "RemoraError",
+    "WorkspaceError",
+    "BundleConfig",
+    "DiscoveryConfig",
+    "ErrorPolicy",
+    "ExecutionConfig",
+    "IndexerConfig",
+    "ModelConfig",
     "RemoraConfig",
-    "GraphWorkspace",
-    "WorkspaceKV",
+    "WorkspaceConfig",
+    "load_config",
+    "serialize_config",
+    "AgentCompleteEvent",
+    "AgentErrorEvent",
+    "AgentSkippedEvent",
+    "AgentStartEvent",
+    "CheckpointRestoredEvent",
+    "CheckpointSavedEvent",
+    "GraphCompleteEvent",
+    "GraphErrorEvent",
+    "GraphStartEvent",
+    "HumanInputRequestEvent",
+    "HumanInputResponseEvent",
+    "KernelEndEvent",
+    "KernelStartEvent",
+    "ModelRequestEvent",
+    "ModelResponseEvent",
+    "RemoraEvent",
+    "ToolCallEvent",
+    "ToolResultEvent",
+    "TurnCompleteEvent",
+    "EventBus",
+    "EventHandler",
+    "EventSourcedBus",
+    "EventStore",
+    "AgentNode",
+    "build_graph",
+    "get_execution_batches",
+    "AgentState",
+    "ExecutorState",
+    "GraphExecutor",
+    "ResultSummary",
+    "CSTNode",
+    "LANGUAGE_EXTENSIONS",
+    "NodeType",
+    "TreeSitterDiscoverer",
+    "compute_node_id",
+    "discover",
+    "ContextBuilder",
+    "RecentAction",
+    "AgentWorkspace",
+    "CairnDataProvider",
+    "CairnExternals",
+    "CairnResultHandler",
+    "CairnWorkspaceService",
+    "SyncMode",
     "WorkspaceManager",
+    "RemoraContainer",
+    "ScopedContainer",
+    "FileWatcher",
+    "StreamingSyncManager",
+    "SyncStats",
+    "RemoraGrailTool",
+    "build_virtual_fs",
+    "discover_grail_tools",
+    "CheckpointManager",
+    "PathResolver",
 ]

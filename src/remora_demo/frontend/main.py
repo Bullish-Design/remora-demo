@@ -15,7 +15,7 @@ from pathlib import Path
 import aiohttp
 
 from stario import Context, RichTracer, Stario, Writer
-from stario.html import Div
+from stario.html import Div, SafeString
 
 from .views import home_view, render_home
 
@@ -141,7 +141,7 @@ async def list_files(c: Context, w: Writer) -> None:
                 if not items_html:
                     items_html = '<div class="empty-state">No files</div>'
 
-                w.patch(Div({"id": "file-picker-list"}, items_html))
+                w.patch(Div({"id": "file-picker-list"}, SafeString(items_html)))
                 w.sync({"filePickerPath": current_path, "filePickerError": ""})
 
     except aiohttp.ClientError as e:
@@ -158,7 +158,7 @@ def _render_file_item(name: str, is_dir: bool, size: int | None = None) -> str:
     if is_dir:
         return f"""<div class="file-item directory">
             <button type="button" class="file-item-btn" 
-                data-on-click="$graphLauncher.filePickerPath = $graphLauncher.filePickerPath 
+                data-on:click="$graphLauncher.filePickerPath = $graphLauncher.filePickerPath 
                     ? $graphLauncher.filePickerPath + '/{safe_name}' 
                     : '{safe_name}';
                 @get('/api/files?path=' + $graphLauncher.filePickerPath);">
@@ -168,7 +168,7 @@ def _render_file_item(name: str, is_dir: bool, size: int | None = None) -> str:
     else:
         return f"""<div class="file-item file">
             <button type="button" class="file-item-btn"
-                data-on-click="$graphLauncher.targetPath = $graphLauncher.filePickerPath 
+                data-on:click="$graphLauncher.targetPath = $graphLauncher.filePickerPath 
                     ? $graphLauncher.filePickerPath + '/{safe_name}' 
                     : '{safe_name}';
                 $graphLauncher.filePickerOpen = false;">
