@@ -35,6 +35,25 @@ start-backend
 start-frontend
 ```
 
+## Refactor Swarm Demo (Standalone)
+
+This demo uses the Remora service API (not the chat service) and a dedicated
+Stario frontend.
+
+```bash
+# backend shell (Python 3.13)
+start-refactor-backend
+
+# frontend shell (Python 3.14)
+start-refactor-frontend
+```
+
+Defaults:
+- Backend: `http://127.0.0.1:8421`
+- Frontend: `http://127.0.0.1:8001`
+
+Set `REFACTOR_BACKEND_URL` to point the frontend at a different backend.
+
 ## Notes
 
 - The backend expects an OpenAI-compatible model server at `http://localhost:8000/v1`.

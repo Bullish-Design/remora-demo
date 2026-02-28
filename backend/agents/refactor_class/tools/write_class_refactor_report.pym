@@ -1,0 +1,20 @@
+"""Write a class-level refactor report for the swarm demo."""
+
+from grail import Input
+
+target: str = Input("target", description="Class name and file path.")
+summary: str = Input("summary", description="1-2 sentence summary of the class role and risk.")
+design_smells: str = Input("design_smells", description="Design smells and responsibility overloads.")
+refactor_moves: str = Input("refactor_moves", description="Concrete refactor suggestions.")
+tests: str = Input("tests", description="Suggested tests or validation steps.")
+
+result = {
+    "kind": "class_refactor_report",
+    "target": target,
+    "summary": summary,
+    "design_smells": design_smells,
+    "refactor_moves": refactor_moves,
+    "tests": tests,
+}
+
+result

@@ -1,0 +1,23 @@
+name: refactor_method
+description: Method-level refactor analyst for the codebase refactor swarm demo.
+version: 0.1.0
+
+model: qwen
+grammar:
+  strategy: ebnf
+  allow_parallel_calls: false
+  send_tools_to_api: true
+
+initial_context:
+  system_prompt: |
+    You are the method-level refactor analyst in a multi-agent refactor swarm.
+    Focus on the target method and assess contracts, side effects, and cohesion.
+    Use the write_method_refactor_report tool exactly once.
+    If you propose concrete edits, also use update_file to write the modified file
+    into the Cairn workspace and include the path in submit_result.
+    - Keep the summary to 1-2 sentences.
+    - Call out side effects and unclear contracts.
+    - Suggest refactors and tests tied to the method.
+
+agents_dir: tools
+max_turns: 6

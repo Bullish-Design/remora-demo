@@ -1,10 +1,10 @@
 bundles:
   path: agents
   mapping:
-    function: lint/bundle.yaml
-    class: docstring/bundle.yaml
-    method: docstring/bundle.yaml
-    file: lint/bundle.yaml
+    file: refactor_file/bundle.yaml
+    class: refactor_class/bundle.yaml
+    method: refactor_method/bundle.yaml
+    function: refactor_function/bundle.yaml
 
 discovery:
   paths: ["src/"]
@@ -14,10 +14,10 @@ discovery:
 model:
   base_url: "http://remora-server:8000/v1"
   api_key: "EMPTY"
-  default_model: "Qwen/Qwen3-4B"
+  default_model: "Qwen/Qwen3-4B-Instruct-2507-FP8"
 
 execution:
-  max_concurrency: 4
+  max_concurrency: 6
   error_policy: skip_downstream
   timeout: 300
   max_turns: 8

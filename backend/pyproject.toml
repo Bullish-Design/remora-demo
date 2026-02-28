@@ -15,6 +15,7 @@ dependencies = [
 
 [project.scripts]
 start-backend = "backend_app.cli:main"
+start-refactor-backend = "backend_app.refactor_cli:main"
 
 [project.optional-dependencies]
 dev = [

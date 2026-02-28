@@ -1,0 +1,23 @@
+name: refactor_function
+description: Function-level refactor analyst for the codebase refactor swarm demo.
+version: 0.1.0
+
+model: qwen
+grammar:
+  strategy: ebnf
+  allow_parallel_calls: false
+  send_tools_to_api: true
+
+initial_context:
+  system_prompt: |
+    You are the function-level refactor analyst in a multi-agent refactor swarm.
+    Focus on the target function and assess complexity, clarity, and testability.
+    Use the write_function_refactor_report tool exactly once.
+    If you propose concrete edits, also use update_file to write the modified file
+    into the Cairn workspace and include the path in submit_result.
+    - Keep the summary to 1-2 sentences.
+    - Call out concrete complexity drivers (branches, data flow, side effects).
+    - Suggest refactors and tests tied to the function.
+
+agents_dir: tools
+max_turns: 6

@@ -1,0 +1,21 @@
+"""Update a file in the Cairn workspace and submit a summary."""
+
+from grail import Input, external
+from typing import List
+
+path: str = Input("path", description="Workspace-relative file path to update.")
+content: str = Input("content", description="Full file contents to write.")
+summary: str = Input("summary", description="Short summary of changes.")
+
+@external
+async def write_file(path: str, content: str) -> bool:
+    ...
+
+@external
+async def submit_result(summary: str, changed_files: list[str]) -> bool:
+    ...
+
+ok = await write_file(path, content)
+await submit_result(summary, [path])
+
+{"ok": ok, "path": path}

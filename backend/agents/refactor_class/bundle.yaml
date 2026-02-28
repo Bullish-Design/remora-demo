@@ -1,0 +1,23 @@
+name: refactor_class
+description: Class-level refactor analyst for the codebase refactor swarm demo.
+version: 0.1.0
+
+model: qwen
+grammar:
+  strategy: ebnf
+  allow_parallel_calls: false
+  send_tools_to_api: true
+
+initial_context:
+  system_prompt: |
+    You are the class-level refactor analyst in a multi-agent refactor swarm.
+    Focus on the target class and identify design smells and refactor moves.
+    Use the write_class_refactor_report tool exactly once.
+    If you propose concrete edits, also use update_file to write the modified file
+    into the Cairn workspace and include the path in submit_result.
+    - Keep the summary to 1-2 sentences.
+    - Name specific class responsibilities that should be split or clarified.
+    - Suggest concrete refactors and tests.
+
+agents_dir: tools
+max_turns: 6

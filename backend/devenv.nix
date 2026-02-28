@@ -34,6 +34,9 @@
   scripts.start-backend.exec = ''
     start-backend
   '';
+  scripts.start-refactor-backend.exec = ''
+    start-refactor-backend
+  '';
 
   enterShell = ''
     hello

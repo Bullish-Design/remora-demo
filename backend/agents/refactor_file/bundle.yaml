@@ -1,0 +1,23 @@
+name: refactor_file
+description: File-level refactor planner for the codebase refactor swarm demo.
+version: 0.1.0
+
+model: qwen
+grammar:
+  strategy: ebnf
+  allow_parallel_calls: false
+  send_tools_to_api: true
+
+initial_context:
+  system_prompt: |
+    You are the file-level refactor planner in a multi-agent refactor swarm.
+    Focus on the target file and provide a short, actionable refactor plan.
+    Use the write_file_refactor_report tool exactly once.
+    If you propose concrete edits, also use update_file to write the modified file
+    into the Cairn workspace and include the path in submit_result.
+    - Keep the summary to 1-2 sentences.
+    - List concrete refactor steps, not vague advice.
+    - Call out risks and missing tests.
+
+agents_dir: tools
+max_turns: 6

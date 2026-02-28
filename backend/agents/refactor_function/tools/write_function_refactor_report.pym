@@ -1,0 +1,20 @@
+"""Write a function-level refactor report for the swarm demo."""
+
+from grail import Input
+
+target: str = Input("target", description="Function name and file path.")
+summary: str = Input("summary", description="1-2 sentence summary of the function and risk.")
+complexity_drivers: str = Input("complexity_drivers", description="Key sources of complexity.")
+refactor_moves: str = Input("refactor_moves", description="Concrete refactor suggestions.")
+tests: str = Input("tests", description="Suggested tests or validation steps.")
+
+result = {
+    "kind": "function_refactor_report",
+    "target": target,
+    "summary": summary,
+    "complexity_drivers": complexity_drivers,
+    "refactor_moves": refactor_moves,
+    "tests": tests,
+}
+
+result

@@ -34,6 +34,9 @@
   scripts.start-frontend.exec = ''
     start-frontend
   '';
+  scripts.start-refactor-frontend.exec = ''
+    start-refactor-frontend
+  '';
 
   enterShell = ''
     hello

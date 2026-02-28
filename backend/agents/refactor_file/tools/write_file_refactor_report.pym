@@ -1,0 +1,20 @@
+"""Write a file-level refactor report for the swarm demo."""
+
+from grail import Input
+
+target: str = Input("target", description="File path or target name.")
+summary: str = Input("summary", description="1-2 sentence summary of the file's role and risk.")
+risks: str = Input("risks", description="Key risks or code smells in the file.")
+refactor_plan: str = Input("refactor_plan", description="Concrete refactor steps.")
+tests: str = Input("tests", description="Suggested tests or validation steps.")
+
+result = {
+    "kind": "file_refactor_report",
+    "target": target,
+    "summary": summary,
+    "risks": risks,
+    "refactor_plan": refactor_plan,
+    "tests": tests,
+}
+
+result
