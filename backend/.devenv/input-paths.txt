@@ -1,0 +1,7 @@
+/home/andrew/Documents/Projects/remora-demo/backend/.devenv/flake.json
+/home/andrew/Documents/Projects/remora-demo/backend/.devenv.flake.nix
+/home/andrew/Documents/Projects/remora-demo/backend/.env
+/home/andrew/Documents/Projects/remora-demo/backend/devenv.local.nix
+/home/andrew/Documents/Projects/remora-demo/backend/devenv.lock
+/home/andrew/Documents/Projects/remora-demo/backend/devenv.nix
+/home/andrew/Documents/Projects/remora-demo/backend/devenv.yaml

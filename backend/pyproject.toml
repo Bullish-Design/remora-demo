@@ -1,0 +1,30 @@
+[project]
+name = "remora-demo-backend"
+version = "0.1.0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "remora",
+    "starlette>=0.40",
+    "sse-starlette>=2.0",
+    "uvicorn>=0.30",
+]
+
+[project.scripts]
+start-backend = "backend_app.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.uv.sources]
+remora = { git = "https://github.com/Bullish-Design/remora.git", rev = "main" }
+
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["backend_app"]

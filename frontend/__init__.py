@@ -1,0 +1,1 @@
+"""Remora demo frontend module."""
