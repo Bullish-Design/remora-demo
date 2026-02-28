@@ -7,6 +7,10 @@ dependencies = [
     "starlette>=0.40",
     "sse-starlette>=2.0",
     "uvicorn>=0.30",
+    "structured-agents>=0.3.4",
+    "grail>=3.0.0",
+    "cairn",
+    "fsdantic>=0.2.0",
 ]
 
 [project.scripts]
@@ -20,7 +24,10 @@ dev = [
 
 [tool.uv.sources]
 remora = { git = "https://github.com/Bullish-Design/remora.git", rev = "main" }
-
+fsdantic = { git = "https://github.com/Bullish-Design/fsdantic.git" }
+cairn = { git = "https://github.com/Bullish-Design/cairn.git" }
+structured-agents = { git = "https://github.com/Bullish-Design/structured-agents.git", rev = "main"}
+grail = { git = "https://github.com/Bullish-Design/grail.git", rev = "main" }
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

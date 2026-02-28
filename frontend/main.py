@@ -6,8 +6,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-from stario import Relay, Stario
-from stario.tracing import JsonTracer, RichTracer
+from stario import JsonTracer, Relay, RichTracer, Stario
 
 from app.client import RemoraClient
 from app.handlers import (

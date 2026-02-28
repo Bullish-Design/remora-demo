@@ -1,0 +1,28 @@
+bundles:
+  path: agents
+  mapping:
+    function: lint/bundle.yaml
+    class: docstring/bundle.yaml
+    method: docstring/bundle.yaml
+    file: lint/bundle.yaml
+
+discovery:
+  paths: ["src/"]
+  languages: ["python"]
+  max_workers: 4
+
+model:
+  base_url: "http://remora-server:8000/v1"
+  api_key: "EMPTY"
+  default_model: "Qwen/Qwen3-4B"
+
+execution:
+  max_concurrency: 4
+  error_policy: skip_downstream
+  timeout: 300
+  max_turns: 8
+  truncation_limit: 1024
+
+workspace:
+  base_path: ".remora/workspaces"
+  cleanup_after: "1h"

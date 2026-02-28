@@ -1,0 +1,166 @@
+[project]
+name = "remora"
+version = "0.4.8"
+description = "Local code analysis and enhancement with FunctionGemma subagents."
+readme = "docs/CONCEPT.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+
+authors = [
+  { name = "Bullish Design", email = "BullishDesignEngineering@gmail.com" },
+]
+
+dependencies = [
+  "click>=8.1",
+  "typer>=0.12",
+  "rich>=13",
+  "tqdm>=4.66",
+  "pyyaml>=6",
+  "watchfiles>=0.21",
+  "uvicorn>=0.23",
+  "structured-agents>=0.3.4",
+  "grail>=3.0.0",
+  "cairn",
+  "fsdantic>=0.2.0",
+  "pydantic>=2.0",
+  "starlette>=0.30",
+  "datastar-py>=0.1",
+  "tree-sitter>=0.20",
+  "tree-sitter-python>=0.23",
+  "tree-sitter-toml",
+  "tree-sitter-markdown",
+]
+
+[project.optional-dependencies]
+frontend = [
+#  "stario>=0.1.0",
+  "uvicorn>=0.23",
+  "httpx>=0.27",
+]
+backend = [
+  "structured-agents[grammar,vllm]>=0.3",
+  #"vllm>=0.6",
+  #"xgrammar>=0.1",
+  "openai>=1.0",
+]
+full = [
+  "frontend",
+  "backend",
+]
+
+dev = [
+  "pytest>=7.0",
+  "pytest-cov>=4.1",
+  "pytest-asyncio>=0.23",
+  "mypy>=1.10",
+  "ruff>=0.5.0",
+  "hypothesis>=6.0.0",
+  "aiohttp>=3.9",
+  "pytest-benchmark",
+  "pytest-timeout>=2.3.1",
+  "syrupy",
+]
+
+#all = [
+#  "backend",
+#  "dev",
+#]
+
+[tool.uv.sources]
+fsdantic = { git = "https://github.com/Bullish-Design/fsdantic.git" }
+cairn = { git = "https://github.com/Bullish-Design/cairn.git" }
+structured-agents = { git = "https://github.com/Bullish-Design/structured-agents.git", rev = "main"}
+grail = { git = "https://github.com/Bullish-Design/grail.git", rev = "main" }
+
+[project.scripts]
+remora = "remora.cli:main"
+remora-index = "remora.indexer.cli:main"
+
+#[project.urls]
+#homepage = "https://github.com/Bullish-Design/template-py"
+#repository = "https://github.com/Bullish-Design/template-py.git"
+
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/remora", "scripts", "demo"]
+include = [
+    "src/remora/indexer/scripts/**/*.pym",
+    "src/remora/fixtures/**",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/remora",
+    "src/remora/fixtures/**",
+    "demo",
+    "examples",
+    "agents",
+    "training",
+    "docs",
+    "scripts",
+    "CONTRIBUTING.md",
+    "pyproject.toml",
+]
+
+[tool.uv]
+prerelease = "allow"
+python-downloads = "automatic"
+# Keep the default behavior; this section is here so you can extend it later if needed.
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "-q --cov=remora --cov-report=term-missing"
+testpaths = ["tests"]
+markers = [
+  "integration: requires vLLM FunctionGemma server",
+  "grail_runtime: exercises Grail runtime execution",
+  "acceptance: end-to-end MVP acceptance tests (requires vLLM server)",
+  "acceptance_mock: end-to-end tests with mock server",
+  "slow: long-running tests",
+  "cairn: Cairn workspace integration tests",
+  "cairn_isolation: Tests for copy-on-write isolation",
+  "cairn_concurrent: Concurrency safety tests",
+  "cairn_lifecycle: Workspace lifecycle tests",
+  "cairn_slow: Long-running Cairn tests",
+]
+filterwarnings = [
+  "ignore:.*builtin type SwigPyPacked has no __module__ attribute.*:DeprecationWarning",
+  "ignore:.*builtin type SwigPyObject has no __module__ attribute.*:DeprecationWarning",
+  "ignore:.*This process.*is multi-threaded, use of fork\\(\\) may lead to deadlocks.*:DeprecationWarning",
+]
+
+[tool.mypy]
+python_version = "3.13"
+packages = ["remora"]
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+disallow_untyped_calls = true
+no_implicit_optional = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+src = ["src", "demo"]
+
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "UP",
+  "B",
+]
+ignore = ["B008", "E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

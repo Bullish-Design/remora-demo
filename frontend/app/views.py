@@ -31,7 +31,9 @@ def page(*children):
         {"lang": "en"},
         Head(
             Meta({"charset": "UTF-8"}),
-            Meta({"name": "viewport", "content": "width=device-width, initial-scale=1"}),
+            Meta(
+                {"name": "viewport", "content": "width=device-width, initial-scale=1"}
+            ),
             Title("Remora Stario Demo"),
             Link({"rel": "stylesheet", "href": "/static/" + asset("css/style.css")}),
             Script({"type": "module", "src": "/static/" + asset("js/datastar.js")}),
@@ -47,14 +49,23 @@ def status_view(state: DemoState):
         pill("stream", state.event_stream_active, neutral_if_false=True),
     ]
 
+    error_content = []
+    if state.error_message:
+        error_content.append(Div({"class": "error-banner"}, state.error_message))
+
+    if not state.backend_connected:
+        error_content.append(
+            Div(
+                {"class": "info-banner"},
+                "Backend not reachable. Start it with: ",
+                Span({"class": "code"}, "cd backend && devenv shell && start-backend"),
+            )
+        )
+
     return Div(
         {"id": "status-panel"},
         Div({"class": "status-row"}, *status_items),
-        *(
-            [Div({"class": "error-banner"}, state.error_message)]
-            if state.error_message
-            else []
-        ),
+        *error_content,
     )
 
 
@@ -75,7 +86,8 @@ def workspace_panel(state: DemoState):
     return Div(
         {"class": "panel"},
         Div({"class": "panel-title"}, "Workspace"),
-        Div({"class": "form-row"},
+        Div(
+            {"class": "form-row"},
             Label({"for": "workspace-path"}, "Workspace path"),
             Input(
                 {
@@ -87,7 +99,9 @@ def workspace_panel(state: DemoState):
                 data.on("change", at.post("/set-workspace")),
             ),
         ),
-        Div({"class": "status-row"}, Span({"class": workspace_class}, workspace_status)),
+        Div(
+            {"class": "status-row"}, Span({"class": workspace_class}, workspace_status)
+        ),
         Button(
             {"type": "button", "class": "secondary"},
             data.on("click", at.post("/check-backend")),
@@ -114,14 +128,16 @@ def config_panel(state: DemoState):
     return Div(
         {"class": "panel"},
         Div({"class": "panel-title"}, "Agent setup"),
-        Div({"class": "form-row"},
+        Div(
+            {"class": "form-row"},
             Label({"for": "system-prompt"}, "System prompt"),
             Textarea(
                 {"id": "system-prompt", "placeholder": "Guide the agent..."},
                 data.bind("system_prompt"),
             ),
         ),
-        Div({"class": "form-row"},
+        Div(
+            {"class": "form-row"},
             Label({}, "Tool presets"),
             Div({"class": "checkbox-grid"}, *preset_cards),
         ),
@@ -148,7 +164,8 @@ def chat_header_view(state: DemoState):
     session_class = "pill ok" if state.session_active else "pill neutral"
     return Div(
         {"id": "chat-header", "class": "chat-header"},
-        Div({},
+        Div(
+            {},
             Span({"class": "panel-title"}, "Inbox / Outbox"),
             Span({"class": session_class}, f"session: {session_label}"),
         ),
@@ -201,7 +218,9 @@ def chat_input_view(state: DemoState):
         ),
         Button(
             {"type": "button", "class": "primary"},
-            data.attr({"disabled": "!$session_active || $is_processing || !$message_input"}),
+            data.attr(
+                {"disabled": "!$session_active || $is_processing || !$message_input"}
+            ),
             data.on(
                 "click",
                 """
@@ -281,7 +300,11 @@ def home_view(state: DemoState):
                     {"class": "left-column"},
                     workspace_panel(state),
                     config_panel(state),
-                    Div({"class": "panel"}, Div({"class": "panel-title"}, "Tool log"), tool_log_view(state)),
+                    Div(
+                        {"class": "panel"},
+                        Div({"class": "panel-title"}, "Tool log"),
+                        tool_log_view(state),
+                    ),
                 ),
                 Div(
                     {"class": "right-column"},

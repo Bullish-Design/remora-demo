@@ -8,7 +8,7 @@ dependencies = [
 ]
 
 [project.scripts]
-start-frontend = "frontend.main:cli"
+start-frontend = "main:cli"
 
 [project.optional-dependencies]
 dev = [
@@ -20,6 +20,6 @@ dev = [
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["frontend", "frontend.*"]
+[tool.setuptools]
+packages = ["app"]
+py-modules = ["main"]
