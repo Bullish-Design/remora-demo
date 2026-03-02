@@ -8,8 +8,7 @@ dependencies = [
 ]
 
 [project.scripts]
-start-frontend = "main:cli"
-start-refactor-frontend = "refactor_main:cli"
+remora-graph = "graph.__main__:main"
 
 [project.optional-dependencies]
 dev = [
@@ -22,5 +21,4 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
-packages = ["app", "refactor_app"]
-py-modules = ["main", "refactor_main"]
+packages = ["graph", "graph.views"]

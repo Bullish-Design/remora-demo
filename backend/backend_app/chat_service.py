@@ -16,7 +16,6 @@ from remora.core.chat import ChatSession, ChatConfig
 from remora.core.config import load_config
 from remora.core.event_bus import EventBus
 from remora.core.events import ToolCallEvent, ToolResultEvent
-from remora.core.tool_registry import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -70,12 +69,10 @@ async def create_session(request: Request) -> JSONResponse:
 
     remora_config = _load_workspace_config(workspace)
     if remora_config:
-        model_base_url = body.get("model_base_url", remora_config.model.base_url)
-        model_api_key = body.get("model_api_key", remora_config.model.api_key)
-        model_name = body.get("model_name", remora_config.model.default_model)
-        config_source = str(
-            _find_remora_config_path(workspace) or "remora.yaml"
-        )
+        model_base_url = body.get("model_base_url", remora_config.model_base_url)
+        model_api_key = body.get("model_api_key", remora_config.model_api_key)
+        model_name = body.get("model_name", remora_config.model_default)
+        config_source = str(_find_remora_config_path(workspace) or "remora.yaml")
     else:
         model_base_url = body.get("model_base_url", _DEFAULT_MODEL_BASE_URL)
         model_api_key = body.get("model_api_key", _DEFAULT_MODEL_API_KEY)
@@ -210,9 +207,10 @@ async def stream_events(request: Request) -> EventSourceResponse:
                         "event": "tool_call",
                         "data": json.dumps(
                             {
+                                "turn": event.turn,
                                 "name": event.tool_name,
+                                "call_id": event.call_id,
                                 "arguments": event.arguments,
-                                "timestamp": event.timestamp,
                             }
                         ),
                     }
@@ -221,10 +219,12 @@ async def stream_events(request: Request) -> EventSourceResponse:
                         "event": "tool_result",
                         "data": json.dumps(
                             {
+                                "turn": event.turn,
                                 "name": event.tool_name,
+                                "call_id": event.call_id,
                                 "output": event.output_preview,
                                 "is_error": event.is_error,
-                                "timestamp": event.timestamp,
+                                "duration_ms": event.duration_ms,
                             }
                         ),
                     }
@@ -233,10 +233,23 @@ async def stream_events(request: Request) -> EventSourceResponse:
 
 
 async def list_tools(request: Request) -> JSONResponse:
-    """List available tool presets."""
+    """List available tool presets.
+
+    In Remora v0.4.12, build_chat_tools() provides a fixed set of tools
+    (read_file, write_file, list_dir, file_exists, search_files, discover_symbols).
+    There is no ToolRegistry; this endpoint returns the known preset names.
+    """
     return JSONResponse(
         {
-            "presets": ToolRegistry.list_presets(),
+            "presets": ["file_ops"],
+            "tools": [
+                "read_file",
+                "write_file",
+                "list_dir",
+                "file_exists",
+                "search_files",
+                "discover_symbols",
+            ],
         }
     )
 

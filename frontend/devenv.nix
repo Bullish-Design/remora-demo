@@ -1,25 +1,31 @@
-{ pkgs, lib, config, inputs, ... }:
+{
+  pkgs,
+  lib,
+  config,
+  inputs,
+  ...
+}:
 
 {
   # https://devenv.sh/basics/
   env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = [ 
-    pkgs.git 
+  packages = [
+    pkgs.git
     pkgs.uv
-    ];
+  ];
 
   # https://devenv.sh/languages/
   # languages.rust.enable = true;
   languages = {
-      python = {
-          enable = true;
-          version = "3.14";
-          venv.enable = true;
-          uv.enable = true;
-        };
+    python = {
+      enable = true;
+      version = "3.14";
+      venv.enable = true;
+      uv.enable = true;
     };
+  };
 
   # https://devenv.sh/processes/
   # processes.cargo-watch.exec = "cargo-watch";
@@ -31,11 +37,11 @@
   scripts.hello.exec = ''
     echo hello from $GREET
   '';
-  scripts.start-frontend.exec = ''
-    start-frontend
+  scripts.start-graph.exec = ''
+    python -m graph "$@"
   '';
-  scripts.start-refactor-frontend.exec = ''
-    start-refactor-frontend
+  scripts.test-graph.exec = ''
+    python -m pytest tests/ -q "$@"
   '';
 
   enterShell = ''
