@@ -58,6 +58,56 @@ class TestMainModule:
         assert callable(main)
 
 
+class TestLSPEntryPoint:
+    """Verify remora_demo/__main__.py structure (cannot import — needs remora library)."""
+
+    def test_lsp_main_file_exists(self) -> None:
+        p = Path(__file__).parent.parent / "remora_demo" / "__main__.py"
+        assert p.exists()
+
+    def test_lsp_main_has_main_function(self) -> None:
+        source = (
+            Path(__file__).parent.parent / "remora_demo" / "__main__.py"
+        ).read_text()
+        assert "def main()" in source
+
+    def test_lsp_main_imports_event_store(self) -> None:
+        source = (
+            Path(__file__).parent.parent / "remora_demo" / "__main__.py"
+        ).read_text()
+        assert "EventStore" in source
+
+    def test_lsp_main_imports_mock_llm(self) -> None:
+        source = (
+            Path(__file__).parent.parent / "remora_demo" / "__main__.py"
+        ).read_text()
+        assert "MockLLMClient" in source
+
+    def test_lsp_main_uses_start_io(self) -> None:
+        source = (
+            Path(__file__).parent.parent / "remora_demo" / "__main__.py"
+        ).read_text()
+        assert "start_io()" in source
+
+    def test_lsp_main_hooks_initialized(self) -> None:
+        source = (
+            Path(__file__).parent.parent / "remora_demo" / "__main__.py"
+        ).read_text()
+        assert "INITIALIZED" in source
+
+    def test_lsp_main_creates_runner(self) -> None:
+        source = (
+            Path(__file__).parent.parent / "remora_demo" / "__main__.py"
+        ).read_text()
+        assert "AgentRunner" in source
+
+    def test_lsp_main_has_if_name_guard(self) -> None:
+        source = (
+            Path(__file__).parent.parent / "remora_demo" / "__main__.py"
+        ).read_text()
+        assert '__name__ == "__main__"' in source
+
+
 class TestLaunchScript:
     """Verify launch.sh structure."""
 
@@ -79,3 +129,11 @@ class TestLaunchScript:
     def test_launch_sh_runs_module(self) -> None:
         source = (Path(__file__).parent.parent / "launch.sh").read_text()
         assert "python -m graph" in source
+
+    def test_launch_sh_starts_nvim(self) -> None:
+        source = (Path(__file__).parent.parent / "launch.sh").read_text()
+        assert "nvim" in source
+
+    def test_launch_sh_kills_graph_on_exit(self) -> None:
+        source = (Path(__file__).parent.parent / "launch.sh").read_text()
+        assert "kill" in source
