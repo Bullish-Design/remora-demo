@@ -11,13 +11,20 @@
   env.GREET = "devenv";
 
   # Playwright — use Nix-managed browsers, skip pip download
-  env.PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+  env.PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright.browsers}/share/playwright";
+  env.PLAYWRIGHT_DRIVER_EXECUTABLE_PATH = "${pkgs.playwright-driver}/bin/playwright-driver";
+  env.PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = true;
+  env.PLAYWRIGHT_NODEJS_PATH = "${pkgs.nodejs}/bin/node";
   env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
 
   # https://devenv.sh/packages/
   packages = [
     pkgs.git
     pkgs.uv
+    pkgs.playwright
+    pkgs.playwright-driver
+    pkgs.playwright.browsers
+    pkgs.nodejs
   ];
 
   # https://devenv.sh/languages/

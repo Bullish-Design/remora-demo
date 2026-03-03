@@ -1,7 +1,7 @@
 """Full HTML shell — the initial page served on GET /.
 
 Returns a complete HTML document as a string. Includes:
-- Datastar CDN script
+- Datastar JS bundle (served locally from /static/)
 - Graph CSS
 - Initial graph SVG
 - Layout structure (header, graph pane, sidebar)
@@ -16,7 +16,7 @@ from graph.css import graph_css
 from graph.state import GraphSnapshot
 from graph.views.graph import render_graph
 
-DATASTAR_CDN = "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0-RC.7/bundles/datastar.js"
+DATASTAR_SRC = "/static/datastar.js"
 
 ZOOM_PAN_JS = """\
 (function() {
@@ -70,10 +70,10 @@ def render_shell(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Remora Graph</title>
-<script type="module" src="{DATASTAR_CDN}"></script>
+<script type="module" src="{DATASTAR_SRC}"></script>
 <style>{css}</style>
 </head>
-<body data-on-load="@get('/subscribe')">
+<body data-init="@get('/subscribe')">
 <div class="app" data-signals='{{"activeTab": "log", "chatMessage": ""}}'>
   <header class="header">
     <div class="header-title">Remora Graph</div>

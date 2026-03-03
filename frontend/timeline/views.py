@@ -13,7 +13,7 @@ from timeline.css import timeline_css
 from timeline.state import TimelineData
 from timeline.svg import render_timeline_svg
 
-DATASTAR_CDN = "https://cdn.jsdelivr.net/gh/starfederation/datastar@v1.0.0-RC.7/bundles/datastar.js"
+DATASTAR_SRC = "/static/datastar.js"
 
 TIMELINE_ZOOM_PAN_JS = """\
 (function() {
@@ -99,10 +99,10 @@ def render_timeline_shell(data: TimelineData) -> str:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Remora Timeline</title>
-<script type="module" src="{DATASTAR_CDN}"></script>
+<script type="module" src="{DATASTAR_SRC}"></script>
 <style>{css}</style>
 </head>
-<body data-on-load="@get('/timeline/subscribe')">
+<body data-init="@get('/timeline/subscribe')">
 <div class="app">
   <header class="header">
     <div class="header-title">Remora Timeline</div>
@@ -149,7 +149,9 @@ def render_event_inspector(event: dict | None) -> str:
 
     # Try to pretty-print the payload
     try:
-        payload_obj = json.loads(payload_raw) if isinstance(payload_raw, str) else payload_raw
+        payload_obj = (
+            json.loads(payload_raw) if isinstance(payload_raw, str) else payload_raw
+        )
         payload_display = html_mod.escape(json.dumps(payload_obj, indent=2))
     except (json.JSONDecodeError, TypeError):
         payload_display = html_mod.escape(str(payload_raw))

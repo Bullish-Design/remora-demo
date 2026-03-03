@@ -23,7 +23,14 @@ from graph.svg import (
 
 class TestPalette:
     def test_status_fill_has_standard_statuses(self) -> None:
-        for status in ("active", "idle", "running", "pending_approval", "error", "orphaned"):
+        for status in (
+            "active",
+            "idle",
+            "running",
+            "pending_approval",
+            "error",
+            "orphaned",
+        ):
             assert status in STATUS_FILL
 
     def test_node_radius_has_standard_types(self) -> None:
@@ -77,7 +84,9 @@ class TestSvgPrimitives:
         assert 'text-anchor="middle"' in result
 
     def test_svg_group_open_close(self) -> None:
-        open_tag = svg_group_open(transform="translate(100.0,200.0)", class_name="node-group")
+        open_tag = svg_group_open(
+            transform="translate(100.0,200.0)", class_name="node-group"
+        )
         assert "<g" in open_tag
         assert 'transform="translate(100.0,200.0)"' in open_tag
         assert 'class="node-group"' in open_tag
@@ -134,7 +143,11 @@ class TestRenderNode:
         assert "</g>" in result
 
     def test_long_name_truncated(self) -> None:
-        node = {"name": "very_long_function_name_here", "node_type": "function", "status": "idle"}
+        node = {
+            "name": "very_long_function_name_here",
+            "node_type": "function",
+            "status": "idle",
+        }
         result = render_node("x", 0.0, 0.0, node)
         assert "very_long_functi.." in result
 
@@ -162,7 +175,7 @@ class TestRenderNode:
     def test_click_action(self) -> None:
         node = {"name": "f", "node_type": "function", "status": "idle"}
         result = render_node("my_func", 0.0, 0.0, node)
-        assert "data-on-click" in result
+        assert "data-on:click" in result
         assert "/agent/my_func" in result
 
 

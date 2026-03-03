@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 from stario import Context, Relay, RichTracer, Stario, Writer
 from stario.html import SafeString
@@ -67,7 +68,7 @@ def index(state: GraphState, layout: ForceLayout):
         )
         layout.step(150)
         positions = layout.get_positions()
-        w.html(render_shell(snapshot, positions))
+        w.html(SafeString(render_shell(snapshot, positions)))
 
     return handler
 
@@ -93,7 +94,11 @@ def subscribe(state: GraphState, layout: ForceLayout, relay: Relay):
             if subject in ("graph.topology", "graph.status", "graph.cursor"):
                 snapshot = await asyncio.to_thread(state.read_snapshot)
                 positions = layout.get_positions()
-                cf = snapshot.cursor_focus.get("agent_id") if snapshot.cursor_focus else None
+                cf = (
+                    snapshot.cursor_focus.get("agent_id")
+                    if snapshot.cursor_focus
+                    else None
+                )
                 w.patch(SafeString(render_graph(snapshot, positions, cursor_focus=cf)))
 
             if subject == "graph.events":
@@ -111,14 +116,26 @@ def agent_detail(state: GraphState):
     async def handler(c: Context, w: Writer) -> None:
         agent_id = c.req.tail
         if not agent_id:
-            w.html(SafeString(render_sidebar_content(None, [], [], {})))
+            w.patch(SafeString(render_sidebar_content(None, [], [], {})))
             return
 
         node = await asyncio.to_thread(state.read_node, agent_id)
-        events = await asyncio.to_thread(state.read_events_for_agent, agent_id) if node else []
-        proposals = await asyncio.to_thread(state.read_proposals_for_agent, agent_id) if node else []
-        connections = await asyncio.to_thread(state.read_edges_for_node, agent_id) if node else {}
-        w.html(SafeString(render_sidebar_content(node, events, proposals, connections)))
+        events = (
+            await asyncio.to_thread(state.read_events_for_agent, agent_id)
+            if node
+            else []
+        )
+        proposals = (
+            await asyncio.to_thread(state.read_proposals_for_agent, agent_id)
+            if node
+            else []
+        )
+        connections = (
+            await asyncio.to_thread(state.read_edges_for_node, agent_id) if node else {}
+        )
+        w.patch(
+            SafeString(render_sidebar_content(node, events, proposals, connections))
+        )
 
     return handler
 
@@ -165,7 +182,7 @@ def timeline_index(state: GraphState):
     async def handler(c: Context, w: Writer) -> None:
         conn = state._get_conn()
         data = await asyncio.to_thread(read_timeline_data, conn)
-        w.html(render_timeline_shell(data))
+        w.html(SafeString(render_timeline_shell(data)))
 
     return handler
 
@@ -199,13 +216,13 @@ def timeline_event_detail(state: GraphState):
     async def handler(c: Context, w: Writer) -> None:
         event_id_str = c.req.tail
         if not event_id_str:
-            w.html(SafeString(render_event_inspector(None)))
+            w.patch(SafeString(render_event_inspector(None)))
             return
 
         try:
             event_id = int(event_id_str)
         except ValueError:
-            w.html(SafeString(render_event_inspector(None)))
+            w.patch(SafeString(render_event_inspector(None)))
             return
 
         conn = state._get_conn()
@@ -217,7 +234,7 @@ def timeline_event_detail(state: GraphState):
         )
         row = cursor.fetchone()
         event = dict(row) if row else None
-        w.html(SafeString(render_event_inspector(event)))
+        w.patch(SafeString(render_event_inspector(event)))
 
     return handler
 
@@ -246,7 +263,12 @@ def create_app(
     state = GraphState(db_path=db_path)
     layout = ForceLayout(width=900, height=600)
     relay: Relay = Relay()
-    bridge = DBBridge(state=state, layout=layout, relay=relay, poll_interval=poll_interval)
+    bridge = DBBridge(
+        state=state, layout=layout, relay=relay, poll_interval=poll_interval
+    )
+
+    # Static assets (Datastar JS bundle)
+    app.assets("/static", Path(__file__).parent / "static")
 
     # Routes
     app.get("/", index(state, layout))

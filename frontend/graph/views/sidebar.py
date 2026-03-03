@@ -85,18 +85,22 @@ def _render_meta(nid: str, file_path: str, start_line: object, end_line: object)
 def _render_tabs() -> str:
     return (
         '<div class="sidebar-tabs">'
-        '<button class="sidebar-tab" data-on-click="$activeTab = \'log\'">Log</button>'
-        '<button class="sidebar-tab" data-on-click="$activeTab = \'source\'">Source</button>'
-        '<button class="sidebar-tab" data-on-click="$activeTab = \'connections\'">Connections</button>'
-        '<button class="sidebar-tab" data-on-click="$activeTab = \'actions\'">Actions</button>'
+        '<button class="sidebar-tab" data-on:click="$activeTab = \'log\'">Log</button>'
+        '<button class="sidebar-tab" data-on:click="$activeTab = \'source\'">Source</button>'
+        '<button class="sidebar-tab" data-on:click="$activeTab = \'connections\'">Connections</button>'
+        '<button class="sidebar-tab" data-on:click="$activeTab = \'actions\'">Actions</button>'
         "</div>"
     )
 
 
 def _render_log_tab(events: list[dict]) -> str:
-    parts = ['<div class="sidebar-section tab-content" data-show="$activeTab == \'log\'">']
+    parts = [
+        '<div class="sidebar-section tab-content" data-show="$activeTab == \'log\'">'
+    ]
     if not events:
-        parts.append('<div class="sidebar-empty" style="padding:12px">No events yet</div>')
+        parts.append(
+            '<div class="sidebar-empty" style="padding:12px">No events yet</div>'
+        )
     else:
         for ev in events[:15]:
             et = html_mod.escape(str(ev.get("event_type", "")))
@@ -109,24 +113,34 @@ def _render_log_tab(events: list[dict]) -> str:
             parts.append(f'<span class="event-badge">{et}</span>')
             parts.append(f'<span class="event-time">{_format_time(ts)}</span>')
             if message:
-                parts.append(f'<span class="event-summary">{html_mod.escape(message)}</span>')
+                parts.append(
+                    f'<span class="event-summary">{html_mod.escape(message)}</span>'
+                )
             parts.append("</div>")
     parts.append("</div>")
     return "".join(parts)
 
 
 def _render_source_tab(source: str) -> str:
-    parts = ['<div class="sidebar-section tab-content" data-show="$activeTab == \'source\'">']
+    parts = [
+        '<div class="sidebar-section tab-content" data-show="$activeTab == \'source\'">'
+    ]
     if source:
-        parts.append(f'<pre class="source-block"><code>{html_mod.escape(source)}</code></pre>')
+        parts.append(
+            f'<pre class="source-block"><code>{html_mod.escape(source)}</code></pre>'
+        )
     else:
-        parts.append('<div class="sidebar-empty" style="padding:12px">No source code</div>')
+        parts.append(
+            '<div class="sidebar-empty" style="padding:12px">No source code</div>'
+        )
     parts.append("</div>")
     return "".join(parts)
 
 
 def _render_connections_tab(connections: dict, current_nid: str) -> str:
-    parts = ['<div class="sidebar-section tab-content" data-show="$activeTab == \'connections\'">']
+    parts = [
+        '<div class="sidebar-section tab-content" data-show="$activeTab == \'connections\'">'
+    ]
     has_items = False
     for label, key in [
         ("Parents", "parents"),
@@ -140,15 +154,21 @@ def _render_connections_tab(connections: dict, current_nid: str) -> str:
             parts.append(f'<div class="connections-label">{label}</div>')
             for item_id in items:
                 escaped = html_mod.escape(item_id)
-                parts.append(f'<div class="connection-item" data-on-click="@get(\'/agent/{escaped}\')">{escaped}</div>')
+                parts.append(
+                    f'<div class="connection-item" data-on:click="@get(\'/agent/{escaped}\')">{escaped}</div>'
+                )
     if not has_items:
-        parts.append('<div class="sidebar-empty" style="padding:12px">No connections</div>')
+        parts.append(
+            '<div class="sidebar-empty" style="padding:12px">No connections</div>'
+        )
     parts.append("</div>")
     return "".join(parts)
 
 
 def _render_actions_tab(nid: str, proposals: list[dict]) -> str:
-    parts = ['<div class="sidebar-section tab-content" data-show="$activeTab == \'actions\'">']
+    parts = [
+        '<div class="sidebar-section tab-content" data-show="$activeTab == \'actions\'">'
+    ]
 
     # Chat input
     parts.append(
@@ -157,7 +177,7 @@ def _render_actions_tab(nid: str, proposals: list[dict]) -> str:
         '<textarea class="chat-input" placeholder="Message to agent..." '
         'data-model="chatMessage" rows="3"></textarea>'
         f'<button class="action-btn primary" '
-        f"data-on-click=\"@post('/command', "
+        f"data-on:click=\"@post('/command', "
         f"{{signals: {{command_type: 'chat', agent_id: '{nid}', "
         f'payload: JSON.stringify({{message: $chatMessage}})}}}})">Send</button>'
         "</div>"
@@ -175,11 +195,11 @@ def _render_actions_tab(nid: str, proposals: list[dict]) -> str:
                 f'<pre class="proposal-diff">{diff}</pre>'
                 f'<div class="proposal-actions">'
                 f'<button class="action-btn approve" '
-                f"data-on-click=\"@post('/command', "
+                f"data-on:click=\"@post('/command', "
                 f"{{signals: {{command_type: 'approve', agent_id: '{nid}', "
                 f"payload: JSON.stringify({{proposal_id: '{pid}'}})}}}})\">Approve</button>"
                 f'<button class="action-btn danger" '
-                f"data-on-click=\"@post('/command', "
+                f"data-on:click=\"@post('/command', "
                 f"{{signals: {{command_type: 'reject', agent_id: '{nid}', "
                 f"payload: JSON.stringify({{proposal_id: '{pid}'}})}}}})\">Reject</button>"
                 f"</div></div>"

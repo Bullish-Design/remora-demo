@@ -25,7 +25,12 @@ class TestRenderGraph:
         snapshot = GraphSnapshot(
             nodes=[
                 {"remora_id": "a", "name": "a", "node_type": "file", "status": "idle"},
-                {"remora_id": "b", "name": "b", "node_type": "function", "status": "running"},
+                {
+                    "remora_id": "b",
+                    "name": "b",
+                    "node_type": "function",
+                    "status": "running",
+                },
             ],
             edges=[{"from_id": "a", "to_id": "b", "edge_type": "parent_of"}],
         )
@@ -60,7 +65,14 @@ class TestRenderShell:
 
     def test_includes_graph_svg(self) -> None:
         snapshot = GraphSnapshot(
-            nodes=[{"remora_id": "x", "name": "x", "node_type": "function", "status": "idle"}],
+            nodes=[
+                {
+                    "remora_id": "x",
+                    "name": "x",
+                    "node_type": "function",
+                    "status": "idle",
+                }
+            ],
         )
         positions = {"x": (50.0, 50.0)}
         result = render_shell(snapshot, positions)
@@ -75,7 +87,7 @@ class TestRenderShell:
     def test_includes_sse_connection(self) -> None:
         snapshot = GraphSnapshot()
         result = render_shell(snapshot, {})
-        assert "data-on-load" in result
+        assert "data-init" in result
         assert "/subscribe" in result
 
     def test_includes_zoom_pan_js(self) -> None:
@@ -121,7 +133,12 @@ class TestRenderSidebarContent:
         assert "loader.py" in result
 
     def test_tabs_present(self) -> None:
-        node = {"remora_id": "x", "name": "x", "node_type": "function", "status": "idle"}
+        node = {
+            "remora_id": "x",
+            "name": "x",
+            "node_type": "function",
+            "status": "idle",
+        }
         result = render_sidebar_content(node, [], [], {})
         assert "Log" in result
         assert "Source" in result
@@ -129,9 +146,18 @@ class TestRenderSidebarContent:
         assert "Actions" in result
 
     def test_events_rendered(self) -> None:
-        node = {"remora_id": "x", "name": "x", "node_type": "function", "status": "idle"}
+        node = {
+            "remora_id": "x",
+            "name": "x",
+            "node_type": "function",
+            "status": "idle",
+        }
         events = [
-            {"event_type": "AgentStart", "timestamp": time.time(), "message": "started"},
+            {
+                "event_type": "AgentStart",
+                "timestamp": time.time(),
+                "message": "started",
+            },
         ]
         result = render_sidebar_content(node, events, [], {})
         assert "AgentStart" in result
@@ -149,8 +175,18 @@ class TestRenderSidebarContent:
         assert "def foo():" in result
 
     def test_connections_rendered(self) -> None:
-        node = {"remora_id": "x", "name": "x", "node_type": "function", "status": "idle"}
-        connections = {"parents": ["parent_a"], "children": [], "callers": [], "callees": ["callee_b"]}
+        node = {
+            "remora_id": "x",
+            "name": "x",
+            "node_type": "function",
+            "status": "idle",
+        }
+        connections = {
+            "parents": ["parent_a"],
+            "children": [],
+            "callers": [],
+            "callees": ["callee_b"],
+        }
         result = render_sidebar_content(node, [], [], connections)
         assert "parent_a" in result
         assert "callee_b" in result
@@ -158,7 +194,12 @@ class TestRenderSidebarContent:
         assert "Callees" in result
 
     def test_proposals_rendered(self) -> None:
-        node = {"remora_id": "x", "name": "x", "node_type": "function", "status": "idle"}
+        node = {
+            "remora_id": "x",
+            "name": "x",
+            "node_type": "function",
+            "status": "idle",
+        }
         proposals = [{"proposal_id": "p1", "diff": "- old\n+ new"}]
         result = render_sidebar_content(node, [], proposals, {})
         assert "p1" in result
@@ -166,7 +207,12 @@ class TestRenderSidebarContent:
         assert "Reject" in result
 
     def test_chat_input_present(self) -> None:
-        node = {"remora_id": "x", "name": "x", "node_type": "function", "status": "idle"}
+        node = {
+            "remora_id": "x",
+            "name": "x",
+            "node_type": "function",
+            "status": "idle",
+        }
         result = render_sidebar_content(node, [], [], {})
         assert "chat-input" in result
         assert "Send" in result

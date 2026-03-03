@@ -225,7 +225,7 @@ def render_node(
             class_name="node-group",
             data_attrs={
                 "data-node-id": node_id,
-                "data-on-click": f"@get('/agent/{node_id}')",
+                "data-on:click": f"@get('/agent/{node_id}')",
             },
         ),
         svg_circle(

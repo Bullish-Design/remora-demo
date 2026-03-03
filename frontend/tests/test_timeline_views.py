@@ -93,7 +93,7 @@ class TestRenderTimelineShell:
 
     def test_includes_sse_connection(self) -> None:
         result = render_timeline_shell(self._make_data())
-        assert "data-on-load" in result
+        assert "data-init" in result
         assert "/timeline/subscribe" in result
 
     def test_includes_navigation_link(self) -> None:
