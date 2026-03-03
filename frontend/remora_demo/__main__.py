@@ -45,6 +45,7 @@ async def _on_initialized(params: lsp.InitializedParams) -> None:
     db_path = os.path.join(root_path, ".remora", "indexer.db")
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     event_store = EventStore(db_path)
+    await event_store.initialize()
     server.event_store = event_store
     logger.info("EventStore initialized at %s", db_path)
 

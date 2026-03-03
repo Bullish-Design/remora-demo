@@ -29,17 +29,31 @@ def demo_db(tmp_path: Path) -> str:
     conn = sqlite3.connect(str(db_path))
     conn.execute("PRAGMA journal_mode=WAL")
 
-    # Create tables matching the combined schema
+    # Create tables matching the real EventStore schema
     conn.executescript("""
         CREATE TABLE nodes (
-            id TEXT PRIMARY KEY,
-            node_type TEXT NOT NULL,
-            name TEXT NOT NULL,
-            file_path TEXT NOT NULL DEFAULT '',
-            start_line INTEGER NOT NULL DEFAULT 0,
-            end_line INTEGER NOT NULL DEFAULT 0,
-            source_code TEXT NOT NULL DEFAULT '',
-            status TEXT NOT NULL DEFAULT 'idle'
+            node_id         TEXT PRIMARY KEY,
+            node_type       TEXT NOT NULL,
+            name            TEXT NOT NULL,
+            full_name       TEXT NOT NULL,
+            file_path       TEXT NOT NULL,
+            start_line      INTEGER NOT NULL,
+            end_line        INTEGER NOT NULL,
+            start_byte      INTEGER NOT NULL DEFAULT 0,
+            end_byte        INTEGER NOT NULL DEFAULT 0,
+            source_code     TEXT NOT NULL,
+            source_hash     TEXT NOT NULL,
+            parent_id       TEXT,
+            caller_ids      TEXT NOT NULL DEFAULT '[]',
+            callee_ids      TEXT NOT NULL DEFAULT '[]',
+            status          TEXT NOT NULL DEFAULT 'idle',
+            last_trigger_event TEXT NOT NULL DEFAULT '',
+            last_completed_at  REAL,
+            extension_name  TEXT,
+            custom_system_prompt TEXT NOT NULL DEFAULT '',
+            mounted_workspaces TEXT NOT NULL DEFAULT '[]',
+            extra_tools     TEXT NOT NULL DEFAULT '[]',
+            extra_subscriptions TEXT NOT NULL DEFAULT '[]'
         );
 
         CREATE TABLE edges (
@@ -50,12 +64,16 @@ def demo_db(tmp_path: Path) -> str:
         );
 
         CREATE TABLE events (
-            event_id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            graph_id TEXT NOT NULL,
             event_type TEXT NOT NULL,
+            payload TEXT NOT NULL,
             timestamp REAL NOT NULL,
+            created_at REAL NOT NULL,
+            from_agent TEXT,
+            to_agent TEXT,
             correlation_id TEXT,
-            agent_id TEXT,
-            payload JSON NOT NULL DEFAULT '{}'
+            tags TEXT
         );
 
         CREATE TABLE cursor_focus (
@@ -92,33 +110,59 @@ def demo_db(tmp_path: Path) -> str:
 
     # Insert demo nodes
     nodes = [
-        ("configlib", "file", "configlib/__init__.py", "__init__.py", 1, 5, "# configlib package", "idle"),
+        (
+            "configlib",
+            "file",
+            "__init__.py",
+            "__init__.py",
+            "configlib/__init__.py",
+            1,
+            5,
+            "# configlib package",
+            "hash1",
+            "idle",
+        ),
         (
             "load_config",
             "function",
-            "configlib/loader.py",
             "load_config",
+            "configlib.loader.load_config",
+            "configlib/loader.py",
             10,
             25,
             "def load_config(path):\n    ...",
+            "hash2",
             "active",
         ),
-        ("validate", "function", "configlib/schema.py", "validate", 5, 20, "def validate(data):\n    ...", "running"),
+        (
+            "validate",
+            "function",
+            "validate",
+            "configlib.schema.validate",
+            "configlib/schema.py",
+            5,
+            20,
+            "def validate(data):\n    ...",
+            "hash3",
+            "running",
+        ),
         (
             "merge_configs",
             "function",
-            "configlib/merge.py",
             "merge_configs",
+            "configlib.merge.merge_configs",
+            "configlib/merge.py",
             8,
             30,
             "def merge_configs(*cfgs):\n    ...",
+            "hash4",
             "idle",
         ),
     ]
-    for nid, ntype, fpath, name, sl, el, src, status in nodes:
+    for nid, ntype, name, full_name, fpath, sl, el, src, shash, status in nodes:
         conn.execute(
-            "INSERT INTO nodes (id, node_type, file_path, name, start_line, end_line, source_code, status) VALUES (?,?,?,?,?,?,?,?)",
-            (nid, ntype, fpath, name, sl, el, src, status),
+            "INSERT INTO nodes (node_id, node_type, name, full_name, file_path, start_line, end_line, source_code, source_hash, status) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (nid, ntype, name, full_name, fpath, sl, el, src, shash, status),
         )
 
     # Insert edges
@@ -134,21 +178,62 @@ def demo_db(tmp_path: Path) -> str:
 
     # Insert events
     events = [
-        ("e1", "NodeDiscovered", now - 10, "c1", "configlib", json.dumps({"message": "Discovered configlib"})),
-        ("e2", "AgentStart", now - 8, "c1", "load_config", json.dumps({"message": "Agent started processing"})),
         (
-            "e3",
-            "ModelResponse",
-            now - 5,
+            "boot",
+            "NodeDiscovered",
+            json.dumps({"message": "Discovered configlib"}),
+            now - 10,
+            now - 10,
+            "configlib",
+            None,
             "c1",
-            "load_config",
-            json.dumps({"content": "Here is my analysis of load_config"}),
         ),
-        ("e4", "AgentStart", now - 3, "c2", "validate", json.dumps({"message": "Validation agent started"})),
-        ("e5", "AgentError", now - 1, "c2", "validate", json.dumps({"message": "Schema validation failed"})),
+        (
+            "boot",
+            "AgentStart",
+            json.dumps({"message": "Agent started processing"}),
+            now - 8,
+            now - 8,
+            "load_config",
+            None,
+            "c1",
+        ),
+        (
+            "boot",
+            "ModelResponse",
+            json.dumps({"content": "Here is my analysis of load_config"}),
+            now - 5,
+            now - 5,
+            "load_config",
+            None,
+            "c1",
+        ),
+        (
+            "boot",
+            "AgentStart",
+            json.dumps({"message": "Validation agent started"}),
+            now - 3,
+            now - 3,
+            "validate",
+            None,
+            "c2",
+        ),
+        (
+            "boot",
+            "AgentError",
+            json.dumps({"message": "Schema validation failed"}),
+            now - 1,
+            now - 1,
+            "validate",
+            None,
+            "c2",
+        ),
     ]
-    for eid, etype, ts, cid, aid, payload in events:
-        conn.execute("INSERT INTO events VALUES (?,?,?,?,?,?)", (eid, etype, ts, cid, aid, payload))
+    for graph_id, etype, payload, ts, created_at, from_agent, to_agent, cid in events:
+        conn.execute(
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, to_agent, correlation_id) VALUES (?,?,?,?,?,?,?,?)",
+            (graph_id, etype, payload, ts, created_at, from_agent, to_agent, cid),
+        )
 
     # Insert cursor focus
     conn.execute(
@@ -352,8 +437,19 @@ class TestBridgeIntegration:
         # Insert a new node
         conn = sqlite3.connect(demo_db)
         conn.execute(
-            "INSERT INTO nodes (id, node_type, file_path, name, start_line, end_line, source_code, status) VALUES (?,?,?,?,?,?,?,?)",
-            ("new_func", "function", "new.py", "new_func", 1, 5, "def new_func(): ...", "idle"),
+            "INSERT INTO nodes (node_id, node_type, name, full_name, file_path, start_line, end_line, source_code, source_hash, status) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (
+                "new_func",
+                "function",
+                "new_func",
+                "new.new_func",
+                "new.py",
+                1,
+                5,
+                "def new_func(): ...",
+                "hash_new",
+                "idle",
+            ),
         )
         conn.commit()
         conn.close()
@@ -381,7 +477,7 @@ class TestBridgeIntegration:
 
         # Change a node's status
         conn = sqlite3.connect(demo_db)
-        conn.execute("UPDATE nodes SET status = 'error' WHERE id = 'load_config'")
+        conn.execute("UPDATE nodes SET status = 'error' WHERE node_id = 'load_config'")
         conn.commit()
         conn.close()
 
@@ -409,8 +505,8 @@ class TestBridgeIntegration:
         # Insert a new event
         conn = sqlite3.connect(demo_db)
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
-            ("e99", "AgentComplete", time.time(), "c3", "load_config", json.dumps({"message": "done"})),
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
+            ("boot", "AgentComplete", json.dumps({"message": "done"}), time.time(), time.time(), "load_config", "c3"),
         )
         conn.commit()
         conn.close()

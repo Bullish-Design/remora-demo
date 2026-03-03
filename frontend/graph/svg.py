@@ -173,9 +173,9 @@ def render_edge(
     edge_type = edge.get("edge_type", "parent_of")
     style = EDGE_STYLE.get(edge_type, EDGE_STYLE["parent_of"])
 
-    is_active = (cursor_focus and (from_id == cursor_focus or to_id == cursor_focus)) or (
-        selected_node and (from_id == selected_node or to_id == selected_node)
-    )
+    is_active = (
+        cursor_focus and (from_id == cursor_focus or to_id == cursor_focus)
+    ) or (selected_node and (from_id == selected_node or to_id == selected_node))
     width = float(style["width"]) + (1.0 if is_active else 0.0)  # type: ignore[arg-type]
     opacity = 0.9 if is_active else float(style["opacity"])  # type: ignore[arg-type]
     dash = str(style["dash"])
@@ -223,9 +223,18 @@ def render_node(
         svg_group_open(
             transform=f"translate({x},{y})",
             class_name="node-group",
-            data_attrs={"data-on-click": f"@get('/agent/{node_id}')"},
+            data_attrs={
+                "data-node-id": node_id,
+                "data-on-click": f"@get('/agent/{node_id}')",
+            },
         ),
-        svg_circle(r=r, fill=fill, stroke=stroke, stroke_width=stroke_width, filter_id=filter_id),
+        svg_circle(
+            r=r,
+            fill=fill,
+            stroke=stroke,
+            stroke_width=stroke_width,
+            filter_id=filter_id,
+        ),
         svg_text(display_name, dy=r + 14, font_size=font_size),
         svg_group_close(),
     ]

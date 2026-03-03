@@ -49,8 +49,8 @@ class GraphState:
         cursor.execute("SELECT * FROM nodes WHERE status != 'orphaned'")
         nodes = [dict(row) for row in cursor.fetchall()]
         for n in nodes:
-            if "id" in n:
-                n["remora_id"] = n.pop("id")
+            if "node_id" in n:
+                n["remora_id"] = n.pop("node_id")
 
         cursor.execute("SELECT * FROM edges")
         edges = [dict(row) for row in cursor.fetchall()]
@@ -65,13 +65,13 @@ class GraphState:
         """Read a single node by id."""
         conn = self._get_conn()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM nodes WHERE id = ?", (node_id,))
+        cursor.execute("SELECT * FROM nodes WHERE node_id = ?", (node_id,))
         row = cursor.fetchone()
         if not row:
             return None
         d = dict(row)
-        if "id" in d:
-            d["remora_id"] = d.pop("id")
+        if "node_id" in d:
+            d["remora_id"] = d.pop("node_id")
         return d
 
     def read_events_for_agent(self, agent_id: str, limit: int = 20) -> list[dict]:
@@ -80,9 +80,10 @@ class GraphState:
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT event_id, event_type, timestamp, correlation_id, agent_id, payload
+            SELECT id as event_id, event_type, timestamp, correlation_id,
+                   from_agent, to_agent, payload
             FROM events
-            WHERE agent_id = ? OR json_extract(payload, '$.to_agent') = ?
+            WHERE from_agent = ? OR to_agent = ?
             ORDER BY timestamp DESC LIMIT ?
             """,
             (agent_id, agent_id, limit),
@@ -136,7 +137,8 @@ class GraphState:
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT event_id, event_type, timestamp, correlation_id, agent_id,
+            SELECT id as event_id, event_type, timestamp, correlation_id,
+                   from_agent, to_agent,
                    json_extract(payload, '$.message') as message,
                    json_extract(payload, '$.content') as content
             FROM events

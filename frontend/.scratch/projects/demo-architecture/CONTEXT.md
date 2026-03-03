@@ -1,33 +1,49 @@
-# CONTEXT: DEMO_ARCHITECTURE.md
+# CONTEXT: DEMO_ARCHITECTURE.md Revision (Round 2 Audit)
 
 ## Current State
 
-**PROJECT COMPLETE.**
+**PROJECT COMPLETE — Round 2 audit finished.**
 
-The DEMO_ARCHITECTURE.md document has been written in full at `/home/andrew/Documents/Projects/remora-demo/DEMO_ARCHITECTURE.md`. It is 1715 lines covering 8 major sections and 51 subsections.
+The full audit of `DEMO_ARCHITECTURE.md` against the current Remora library source code is done. All discrepancies have been identified and fixed.
 
-## What Was Done
+## What Was Done in Round 2
 
-1. Read all Remora source files from `/home/andrew/Documents/Projects/remora/src/remora/`:
-   - Core: events, event_bus, event_store, agent_node, discovery, subscriptions, projections, workspace, cairn_bridge, cairn_externals, swarm_executor, swarm_state, agent_state, config, chat, reconciler, errors, tools/grail, tools/swarm
-   - Service: api, handlers, datastar, chat_service
-   - Adapters: starlette
-   - LSP: server, runner, db, graph, watcher, models, notifications, handlers/*, __main__
-   - UI: projector, view, components/*
-   - Extensions, CLI main
+Audited the entire 3158-line document against every source file in the refactored Remora library. Found and fixed 11 discrepancies:
 
-2. Created project tracking at `frontend/.scratch/projects/demo-architecture/`
+### Critical Fixes (type errors in code blocks)
+1. **CSTNode** described as `@dataclass(frozen=True, slots=True)` → actually `class CSTNode(BaseModel)` with `ConfigDict(frozen=True)` and custom `__hash__` by `node_id` only
+2. **SubscriptionPattern** described as `@dataclass` → actually `class SubscriptionPattern(BaseModel)`
+3. **ToolSchema** described as "a dataclass" → actually `class ToolSchema(BaseModel)`
+4. **`to_row()` code** showed `asdict(t) if is_dataclass(t)` → actual code uses `t.model_dump()`
 
-3. Wrote DEMO_ARCHITECTURE.md using TOC-first approach, section by section:
-   - Section 1: System Overview (architecture diagram, three modes of operation)
-   - Section 2: Remora Core Architecture (10 subsections covering every core module)
-   - Section 3: The Data Flow Pipeline (5 subsections tracing source code → agent turn)
-   - Section 4: Neovim Demo Architecture (9 subsections covering entire LSP layer)
-   - Section 5: Web Demo Architecture (6 subsections: service, adapter, Datastar, UI, chat, graph viewer)
-   - Section 6: Crossover Interfaces (12 subsections — the main focus — all boundaries documented with data shapes and gotchas)
-   - Section 7: Shared State & SQLite Databases (5 databases with full schemas)
-   - Section 8: Startup & Lifecycle (4 startup modes documented step by step)
+### Factual Corrections
+5. **parse_file()** was claimed to be "Used by ASTWatcher" → ASTWatcher has its own `_parse_file_only()` method
+6. **EventBus `clear()` method** was undocumented
+7. **Section 9.4 routes** showed `/graph`, `/sidebar`, `/stream` → actual routes are `/subscribe`, `/agent/*`, `/events`, `/command`
+8. **Section 9.4** claimed "never writes to database" → contradicted by `push_command()` write path
 
-## Note
+### Minor Fixes
+9. Section 8.3 `pattern_json` described as "dataclass" → "Pydantic BaseModel"
+10. Section 7.4 "List and dataclass fields" → "List and nested Pydantic model fields"
+11. Line number references updated (to_row, from_row, to_system_prompt)
 
-NVIM_DEMO_CONCEPT.md was listed as a reference doc but does not exist in the repo. The Neovim demo section was written from the actual LSP source code instead.
+## Document Structure (unchanged)
+
+| Section | Title | Lines (approx) |
+|---------|-------|----------------|
+| 1 | System Overview | ~80 |
+| 2 | Remora Core Architecture | ~760 |
+| 3 | The Data Flow Pipeline | ~200 |
+| 4 | Neovim Demo Architecture | ~450 |
+| 5 | Web Demo Architecture | ~250 |
+| 6 | Graph Viewer Architecture | ~300 |
+| 7 | Crossover Interfaces | ~350 |
+| 8 | Unified SQLite Database | ~200 |
+| 9 | Startup & Lifecycle | ~430 |
+
+## File Locations
+
+- Target: `/home/andrew/Documents/Projects/remora-demo/DEMO_ARCHITECTURE.md`
+- Remora source: `/home/andrew/Documents/Projects/remora/src/remora/`
+- remora_demo: `/home/andrew/Documents/Projects/remora/remora_demo/`
+- Frontend: `/home/andrew/Documents/Projects/remora-demo/frontend/`

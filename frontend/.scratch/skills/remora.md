@@ -108,14 +108,30 @@ The graph viewer reads from a **shared SQLite database** (`indexer.db`). Remora 
 **`nodes`** — one row per code symbol being processed
 | Column | Type | Description |
 |--------|------|-------------|
-| `id` | TEXT PK | Unique node identifier |
+| `node_id` | TEXT PK | Unique node identifier |
+| `node_type` | TEXT | "function", "class", "method" (default "function") |
 | `name` | TEXT | Symbol name |
-| `node_type` | TEXT | "function", "class", "method" |
-| `status` | TEXT | "pending", "running", "completed", "failed", "orphaned" |
+| `full_name` | TEXT | Fully qualified name |
 | `file_path` | TEXT | Source file path |
 | `start_line` | INT | Start line in file |
 | `end_line` | INT | End line in file |
-| `language` | TEXT | Programming language |
+| `start_byte` | INT | Start byte offset |
+| `end_byte` | INT | End byte offset |
+| `source_code` | TEXT | Source code text |
+| `source_hash` | TEXT | Hash of source code |
+| `parent_id` | TEXT | Parent node ID (nullable) |
+| `caller_ids` | TEXT | JSON array of caller node IDs |
+| `callee_ids` | TEXT | JSON array of callee node IDs |
+| `status` | TEXT | "idle", "running", "completed", "failed", "orphaned" |
+| `last_trigger_event` | TEXT | Last event that triggered this node |
+| `last_completed_at` | REAL | Unix timestamp of last completion (nullable) |
+| `extension_name` | TEXT | Extension name (nullable) |
+| `custom_system_prompt` | TEXT | Custom system prompt for agent |
+| `mounted_workspaces` | TEXT | JSON array of workspace paths |
+| `extra_tools` | TEXT | JSON array of extra tool names |
+| `extra_subscriptions` | TEXT | JSON array of extra subscriptions |
+
+Note: The graph viewer renames `node_id` → `remora_id` when reading via `GraphState`.
 
 **`edges`** — relationships between nodes
 | Column | Type | Description |
@@ -124,15 +140,21 @@ The graph viewer reads from a **shared SQLite database** (`indexer.db`). Remora 
 | `to_id` | TEXT FK | Target node |
 | `edge_type` | TEXT | "parent_of", "calls" |
 
-**`events`** — event log
+**`events`** — event log (AUTOINCREMENT primary key)
 | Column | Type | Description |
 |--------|------|-------------|
-| `event_id` | TEXT PK | Unique event ID |
+| `id` | INT PK AUTO | Auto-incrementing event ID |
+| `graph_id` | TEXT | Which graph this event belongs to |
 | `event_type` | TEXT | Event type string |
-| `timestamp` | REAL | Unix timestamp |
-| `correlation_id` | TEXT | For grouping related events |
-| `agent_id` | TEXT | Which agent emitted this |
 | `payload` | TEXT | JSON blob with event data |
+| `timestamp` | REAL | Unix timestamp (event time) |
+| `created_at` | REAL | Unix timestamp (insertion time) |
+| `from_agent` | TEXT | Agent that emitted this event (nullable) |
+| `to_agent` | TEXT | Target agent (nullable) |
+| `correlation_id` | TEXT | For grouping related events (nullable) |
+| `tags` | TEXT | JSON tags (nullable) |
+
+Note: The graph viewer aliases `id` → `event_id` and reads both `from_agent` and `to_agent` when querying.
 
 **`cursor_focus`** — single-row table tracking current editor focus
 | Column | Type | Description |
@@ -146,13 +168,19 @@ The graph viewer reads from a **shared SQLite database** (`indexer.db`). Remora 
 **`proposals`** — agent-generated code proposals
 | Column | Type | Description |
 |--------|------|-------------|
+| `proposal_id` | TEXT PK | Unique proposal ID |
 | `agent_id` | TEXT | Which agent proposed |
+| `old_source` | TEXT | Original source code |
+| `new_source` | TEXT | Proposed new source code |
+| `diff` | TEXT | Diff between old and new |
 | `status` | TEXT | "pending", "accepted", "rejected" |
-| `...` | | Additional proposal data |
+| `created_at` | REAL | Unix timestamp |
+| `file_path` | TEXT | Target file (nullable) |
 
-**`command_queue`** — commands from frontend to backend
+**`command_queue`** — commands from frontend to backend (AUTOINCREMENT)
 | Column | Type | Description |
 |--------|------|-------------|
+| `id` | INT PK AUTO | Auto-incrementing command ID |
 | `command_type` | TEXT | Command name |
 | `agent_id` | TEXT | Target agent (nullable) |
 | `payload` | TEXT | JSON command data |
@@ -172,7 +200,7 @@ Browser ←─SSE─→ Stario Handlers ←─Relay─→ DBBridge ←─poll─
 ### GraphState (`graph/state.py`)
 - Opens SQLite in **read-only WAL mode** (`PRAGMA query_only=ON`)
 - `read_snapshot()` → `GraphSnapshot` (nodes, edges, cursor_focus)
-- `read_events_for_agent(agent_id)` → recent events
+- `read_events_for_agent(agent_id)` → recent events (queries `from_agent` and `to_agent`)
 - `push_command(...)` → writes to `command_queue` (separate writable connection)
 - All reads are **synchronous** — handlers call via `asyncio.to_thread()`
 

@@ -10,6 +10,10 @@
   # https://devenv.sh/basics/
   env.GREET = "devenv";
 
+  # Playwright — use Nix-managed browsers, skip pip download
+  env.PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+  env.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+
   # https://devenv.sh/packages/
   packages = [
     pkgs.git
@@ -41,7 +45,10 @@
     python -m graph "$@"
   '';
   scripts.test-graph.exec = ''
-    python -m pytest tests/ -q "$@"
+    python -m pytest tests/ -q --ignore=tests/e2e "$@"
+  '';
+  scripts.test-e2e.exec = ''
+    python -m pytest tests/e2e/ -v "$@"
   '';
 
   enterShell = ''

@@ -34,7 +34,7 @@ def render_event_list(events: list[dict]) -> str:
     parts = ['<div id="event-stream" class="event-stream">']
     for ev in events:
         et = ev.get("event_type", "Unknown")
-        agent_id = ev.get("agent_id", "")
+        agent_id = ev.get("from_agent") or ev.get("agent_id", "")
         ts = ev.get("timestamp", 0)
 
         message = ev.get("message") or ev.get("content") or ""

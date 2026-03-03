@@ -40,14 +40,28 @@ def _create_demo_db(db_path: str) -> None:
 
     conn.executescript("""
         CREATE TABLE nodes (
-            id TEXT PRIMARY KEY,
-            node_type TEXT NOT NULL,
-            name TEXT NOT NULL,
-            file_path TEXT NOT NULL DEFAULT '',
-            start_line INTEGER NOT NULL DEFAULT 0,
-            end_line INTEGER NOT NULL DEFAULT 0,
-            source_code TEXT NOT NULL DEFAULT '',
-            status TEXT NOT NULL DEFAULT 'idle'
+            node_id         TEXT PRIMARY KEY,
+            node_type       TEXT NOT NULL,
+            name            TEXT NOT NULL,
+            full_name       TEXT NOT NULL,
+            file_path       TEXT NOT NULL,
+            start_line      INTEGER NOT NULL,
+            end_line        INTEGER NOT NULL,
+            start_byte      INTEGER NOT NULL DEFAULT 0,
+            end_byte        INTEGER NOT NULL DEFAULT 0,
+            source_code     TEXT NOT NULL,
+            source_hash     TEXT NOT NULL,
+            parent_id       TEXT,
+            caller_ids      TEXT NOT NULL DEFAULT '[]',
+            callee_ids      TEXT NOT NULL DEFAULT '[]',
+            status          TEXT NOT NULL DEFAULT 'idle',
+            last_trigger_event TEXT NOT NULL DEFAULT '',
+            last_completed_at  REAL,
+            extension_name  TEXT,
+            custom_system_prompt TEXT NOT NULL DEFAULT '',
+            mounted_workspaces TEXT NOT NULL DEFAULT '[]',
+            extra_tools     TEXT NOT NULL DEFAULT '[]',
+            extra_subscriptions TEXT NOT NULL DEFAULT '[]'
         );
 
         CREATE TABLE edges (
@@ -58,12 +72,16 @@ def _create_demo_db(db_path: str) -> None:
         );
 
         CREATE TABLE events (
-            event_id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            graph_id TEXT NOT NULL,
             event_type TEXT NOT NULL,
+            payload TEXT NOT NULL,
             timestamp REAL NOT NULL,
+            created_at REAL NOT NULL,
+            from_agent TEXT,
+            to_agent TEXT,
             correlation_id TEXT,
-            agent_id TEXT,
-            payload JSON NOT NULL DEFAULT '{}'
+            tags TEXT
         );
 
         CREATE TABLE cursor_focus (
@@ -99,133 +117,169 @@ def _create_demo_db(db_path: str) -> None:
     now = time.time()
 
     # Beat 2: Nodes discovered after opening files
+    # (node_id, node_type, name, full_name, file_path, start_line, end_line, source_code, source_hash, status)
     nodes = [
         (
             "loader.py",
             "file",
-            "src/configlib/loader.py",
             "loader.py",
+            "src/configlib/loader.py",
+            "src/configlib/loader.py",
             1,
             42,
             "",
+            "hash_loader",
             "idle",
         ),
         (
             "load_config",
             "function",
-            "src/configlib/loader.py",
             "load_config",
+            "src.configlib.loader.load_config",
+            "src/configlib/loader.py",
             10,
             25,
             'def load_config(path: str | Path) -> dict[str, Any]:\n    """Load and validate a config file."""\n    ...',
+            "hash_load_config",
             "idle",
         ),
         (
             "detect_format",
             "function",
-            "src/configlib/loader.py",
             "detect_format",
+            "src.configlib.loader.detect_format",
+            "src/configlib/loader.py",
             28,
             35,
             'def detect_format(path: str | Path) -> str:\n    """Detect config file format."""\n    ...',
+            "hash_detect_format",
             "idle",
         ),
         (
             "load_yaml",
             "function",
-            "src/configlib/loader.py",
             "load_yaml",
+            "src.configlib.loader.load_yaml",
+            "src/configlib/loader.py",
             38,
             42,
             "def load_yaml(path: str | Path) -> dict:\n    ...",
+            "hash_load_yaml",
             "idle",
         ),
         (
             "schema.py",
             "file",
-            "src/configlib/schema.py",
             "schema.py",
+            "src/configlib/schema.py",
+            "src/configlib/schema.py",
             1,
             24,
             "",
+            "hash_schema",
             "idle",
         ),
         (
             "validate",
             "function",
-            "src/configlib/schema.py",
             "validate",
+            "src.configlib.schema.validate",
+            "src/configlib/schema.py",
             8,
             20,
             "def validate(data: dict, schema: dict) -> dict:\n    ...",
+            "hash_validate",
             "idle",
         ),
-        ("merge.py", "file", "src/configlib/merge.py", "merge.py", 1, 26, "", "idle"),
+        (
+            "merge.py",
+            "file",
+            "merge.py",
+            "src/configlib/merge.py",
+            "src/configlib/merge.py",
+            1,
+            26,
+            "",
+            "hash_merge",
+            "idle",
+        ),
         (
             "deep_merge",
             "function",
-            "src/configlib/merge.py",
             "deep_merge",
+            "src.configlib.merge.deep_merge",
+            "src/configlib/merge.py",
             5,
             18,
             "def deep_merge(base: dict, override: dict) -> dict:\n    ...",
+            "hash_deep_merge",
             "idle",
         ),
         (
             "test_loader.py",
             "file",
-            "tests/test_loader.py",
             "test_loader.py",
+            "tests/test_loader.py",
+            "tests/test_loader.py",
             1,
             35,
             "",
+            "hash_test_loader",
             "idle",
         ),
         (
             "test_load_yaml",
             "function",
-            "tests/test_loader.py",
             "test_load_yaml",
+            "tests.test_loader.test_load_yaml",
+            "tests/test_loader.py",
             10,
             20,
             "def test_load_yaml(tmp_path: Path) -> None:\n    ...",
+            "hash_test_load_yaml",
             "idle",
         ),
         (
             "test_load_json",
             "function",
-            "tests/test_loader.py",
             "test_load_json",
+            "tests.test_loader.test_load_json",
+            "tests/test_loader.py",
             23,
             33,
             "def test_load_json(tmp_path: Path) -> None:\n    ...",
+            "hash_test_load_json",
             "idle",
         ),
         (
             "test_merge.py",
             "file",
-            "tests/test_merge.py",
             "test_merge.py",
+            "tests/test_merge.py",
+            "tests/test_merge.py",
             1,
             18,
             "",
+            "hash_test_merge",
             "idle",
         ),
         (
             "test_deep_merge",
             "function",
-            "tests/test_merge.py",
             "test_deep_merge",
+            "tests.test_merge.test_deep_merge",
+            "tests/test_merge.py",
             5,
             12,
             "def test_deep_merge() -> None:\n    ...",
+            "hash_test_deep_merge",
             "idle",
         ),
     ]
-    for nid, ntype, fpath, name, sl, el, src, status in nodes:
+    for nid, ntype, name, full_name, fpath, sl, el, src, shash, status in nodes:
         conn.execute(
-            "INSERT INTO nodes VALUES (?,?,?,?,?,?,?,?)",
-            (nid, ntype, name, fpath, sl, el, src, status),
+            "INSERT INTO nodes (node_id, node_type, name, full_name, file_path, start_line, end_line, source_code, source_hash, status) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (nid, ntype, name, full_name, fpath, sl, el, src, shash, status),
         )
 
     # Edges: parent_of (file->function) + calls
@@ -251,14 +305,15 @@ def _create_demo_db(db_path: str) -> None:
     # Initial events: NodeDiscovered for each node
     for i, (nid, *_rest) in enumerate(nodes):
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                f"discover_{i}",
-                "NodeDiscovered",
-                now - 60 + i,
                 "boot",
-                nid,
+                "NodeDiscovered",
                 json.dumps({"message": f"Discovered {nid}"}),
+                now - 60 + i,
+                now - 60 + i,
+                nid,
+                "boot",
             ),
         )
 
@@ -305,10 +360,7 @@ class TestGoldenPathBeat2:
         snapshot = gs.read_snapshot()
         layout = ForceLayout(width=900, height=600)
         layout.set_graph(
-            [
-                {"id": n.get("remora_id", n.get("id")), "node_type": n.get("node_type")}
-                for n in snapshot.nodes
-            ],
+            [{"id": n.get("remora_id", n.get("id")), "node_type": n.get("node_type")} for n in snapshot.nodes],
             snapshot.edges,
         )
         layout.step(150)
@@ -350,10 +402,7 @@ class TestGoldenPathBeat4:
         snapshot = gs.read_snapshot()
         layout = ForceLayout(width=900, height=600)
         layout.set_graph(
-            [
-                {"id": n.get("remora_id", n.get("id")), "node_type": n.get("node_type")}
-                for n in snapshot.nodes
-            ],
+            [{"id": n.get("remora_id", n.get("id")), "node_type": n.get("node_type")} for n in snapshot.nodes],
             snapshot.edges,
         )
         layout.step(150)
@@ -415,9 +464,7 @@ class TestGoldenPathBeat5:
         # Verify the command is in the queue
         conn = sqlite3.connect(demo_db)
         conn.row_factory = sqlite3.Row
-        row = conn.execute(
-            "SELECT * FROM command_queue WHERE id = ?", (cmd_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM command_queue WHERE id = ?", (cmd_id,)).fetchone()
         assert row["command_type"] == "chat"
         assert row["agent_id"] == "load_config"
         assert row["status"] == "pending"
@@ -429,25 +476,27 @@ class TestGoldenPathBeat5:
         now = time.time()
         conn = sqlite3.connect(demo_db)
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                "chat_1",
+                "boot",
                 "HumanChat",
-                now,
-                "c_chat",
-                "load_config",
                 json.dumps({"message": "what do you do?"}),
+                now,
+                now,
+                "load_config",
+                "c_chat",
             ),
         )
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                "chat_2",
+                "boot",
                 "AgentComplete",
-                now + 0.5,
-                "c_chat",
-                "load_config",
                 json.dumps({"message": "Agent responded"}),
+                now + 0.5,
+                now + 0.5,
+                "load_config",
+                "c_chat",
             ),
         )
         conn.commit()
@@ -532,77 +581,84 @@ class TestGoldenPathBeat6to8:
         conn = sqlite3.connect(demo_db)
 
         # Beat 6: Content changed
-        conn.execute("UPDATE nodes SET status = 'running' WHERE id = 'load_config'")
+        conn.execute("UPDATE nodes SET status = 'running' WHERE node_id = 'load_config'")
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                "cascade_1",
+                "boot",
                 "ContentChanged",
-                now,
-                "c_edit",
-                "load_config",
                 json.dumps({"message": "timeout parameter added"}),
+                now,
+                now,
+                "load_config",
+                "c_edit",
             ),
         )
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                "cascade_2",
+                "boot",
                 "AgentStart",
-                now + 0.1,
-                "c_edit",
-                "load_config",
                 json.dumps({"message": "Analyzing change"}),
+                now + 0.1,
+                now + 0.1,
+                "load_config",
+                "c_edit",
             ),
         )
 
         # Beat 7: Agent thinks, sends message
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                "cascade_3",
+                "boot",
                 "ModelRequest",
-                now + 0.2,
-                "c_edit",
-                "load_config",
                 json.dumps({"message": "Requesting analysis"}),
-            ),
-        )
-        conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
-            (
-                "cascade_4",
-                "ModelResponse",
-                now + 0.3,
-                "c_edit",
+                now + 0.2,
+                now + 0.2,
                 "load_config",
-                json.dumps({"content": "Detected timeout parameter change"}),
+                "c_edit",
             ),
         )
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                "cascade_5",
-                "AgentMessage",
-                now + 0.4,
+                "boot",
+                "ModelResponse",
+                json.dumps({"content": "Detected timeout parameter change"}),
+                now + 0.3,
+                now + 0.3,
+                "load_config",
                 "c_edit",
-                "test_load_yaml",
-                json.dumps({"message": "Update tests for timeout"}),
             ),
         )
-        conn.execute("UPDATE nodes SET status = 'idle' WHERE id = 'load_config'")
+        conn.execute(
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, to_agent, correlation_id) VALUES (?,?,?,?,?,?,?,?)",
+            (
+                "boot",
+                "AgentMessage",
+                json.dumps({"message": "Update tests for timeout"}),
+                now + 0.4,
+                now + 0.4,
+                "load_config",
+                "test_load_yaml",
+                "c_edit",
+            ),
+        )
+        conn.execute("UPDATE nodes SET status = 'idle' WHERE node_id = 'load_config'")
 
         # Beat 8: Test agent runs
-        conn.execute("UPDATE nodes SET status = 'running' WHERE id = 'test_load_yaml'")
+        conn.execute("UPDATE nodes SET status = 'running' WHERE node_id = 'test_load_yaml'")
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                "cascade_6",
+                "boot",
                 "AgentStart",
-                now + 0.5,
-                "c_cascade",
-                "test_load_yaml",
                 json.dumps({"message": "Test agent started"}),
+                now + 0.5,
+                now + 0.5,
+                "test_load_yaml",
+                "c_cascade",
             ),
         )
 
@@ -621,14 +677,15 @@ class TestGoldenPathBeat6to8:
             ),
         )
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                "cascade_7",
+                "boot",
                 "RewriteProposal",
-                now + 1.0,
-                "c_cascade",
-                "test_load_yaml",
                 json.dumps({"message": "Proposed test update"}),
+                now + 1.0,
+                now + 1.0,
+                "test_load_yaml",
+                "c_cascade",
             ),
         )
 
@@ -639,9 +696,7 @@ class TestGoldenPathBeat6to8:
 
         # Verify snapshot reflects cascade state
         snapshot = gs.read_snapshot()
-        test_node = next(
-            n for n in snapshot.nodes if n.get("remora_id") == "test_load_yaml"
-        )
+        test_node = next(n for n in snapshot.nodes if n.get("remora_id") == "test_load_yaml")
         assert test_node["status"] == "running"
 
         # Verify event stream shows cascade
@@ -683,16 +738,17 @@ class TestGoldenPathBeat6to8:
 
         # Simulate beat 6: status change + new event
         conn = sqlite3.connect(demo_db)
-        conn.execute("UPDATE nodes SET status = 'running' WHERE id = 'load_config'")
+        conn.execute("UPDATE nodes SET status = 'running' WHERE node_id = 'load_config'")
         conn.execute(
-            "INSERT INTO events VALUES (?,?,?,?,?,?)",
+            "INSERT INTO events (graph_id, event_type, payload, timestamp, created_at, from_agent, correlation_id) VALUES (?,?,?,?,?,?,?)",
             (
-                "cascade_b_1",
+                "boot",
                 "ContentChanged",
-                time.time(),
-                "c_b",
-                "load_config",
                 json.dumps({"message": "change"}),
+                time.time(),
+                time.time(),
+                "load_config",
+                "c_b",
             ),
         )
         conn.commit()
@@ -715,9 +771,7 @@ class TestGoldenPathBeat9:
 
     def test_reject_command(self, demo_db: str) -> None:
         gs = GraphState(db_path=demo_db)
-        cmd_id = gs.push_command(
-            "reject", "test_load_yaml", {"proposal_id": "p1", "feedback": "needs more"}
-        )
+        cmd_id = gs.push_command("reject", "test_load_yaml", {"proposal_id": "p1", "feedback": "needs more"})
         assert cmd_id > 0
         gs.close()
 
@@ -726,13 +780,7 @@ class TestDemoProjectFiles:
     """Verify all T1/T2 demo project files exist."""
 
     def test_configlib_source_files(self) -> None:
-        base = (
-            Path(__file__).parent.parent
-            / "remora_demo"
-            / "project"
-            / "src"
-            / "configlib"
-        )
+        base = Path(__file__).parent.parent / "remora_demo" / "project" / "src" / "configlib"
         assert (base / "__init__.py").exists()
         assert (base / "loader.py").exists()
         assert (base / "schema.py").exists()
@@ -750,13 +798,7 @@ class TestDemoProjectFiles:
         assert "mock" in content
 
     def test_extension_models(self) -> None:
-        base = (
-            Path(__file__).parent.parent
-            / "remora_demo"
-            / "project"
-            / ".remora"
-            / "models"
-        )
+        base = Path(__file__).parent.parent / "remora_demo" / "project" / ".remora" / "models"
         assert (base / "test_function.py").exists()
         assert (base / "package_init.py").exists()
 

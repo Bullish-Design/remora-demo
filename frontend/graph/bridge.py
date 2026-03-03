@@ -114,7 +114,7 @@ class DBBridge:
 
             # Separate fingerprint for status changes
             cursor.execute(
-                "SELECT group_concat(status) FROM (SELECT status FROM nodes WHERE status != 'orphaned' ORDER BY id)"
+                "SELECT group_concat(status) FROM (SELECT status FROM nodes WHERE status != 'orphaned' ORDER BY node_id)"
             )
             fp["node_status"] = str(cursor.fetchone()[0])
 

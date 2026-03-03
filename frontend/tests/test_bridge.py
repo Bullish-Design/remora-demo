@@ -26,23 +26,39 @@ class FakeRelay:
 
 
 def _create_test_db(path: str) -> sqlite3.Connection:
-    """Create a minimal DB with the expected schema."""
+    """Create a minimal DB with the expected schema matching EventStore."""
     conn = sqlite3.connect(path)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS nodes (
-            id TEXT PRIMARY KEY,
-            name TEXT,
-            node_type TEXT DEFAULT 'function',
-            status TEXT DEFAULT 'idle',
-            file_path TEXT,
-            line INTEGER,
-            source TEXT
+            node_id         TEXT PRIMARY KEY,
+            node_type       TEXT NOT NULL DEFAULT 'function',
+            name            TEXT NOT NULL DEFAULT '',
+            full_name       TEXT NOT NULL DEFAULT '',
+            file_path       TEXT NOT NULL DEFAULT '',
+            start_line      INTEGER NOT NULL DEFAULT 0,
+            end_line        INTEGER NOT NULL DEFAULT 0,
+            start_byte      INTEGER NOT NULL DEFAULT 0,
+            end_byte        INTEGER NOT NULL DEFAULT 0,
+            source_code     TEXT NOT NULL DEFAULT '',
+            source_hash     TEXT NOT NULL DEFAULT '',
+            parent_id       TEXT,
+            caller_ids      TEXT NOT NULL DEFAULT '[]',
+            callee_ids      TEXT NOT NULL DEFAULT '[]',
+            status          TEXT NOT NULL DEFAULT 'idle',
+            last_trigger_event TEXT NOT NULL DEFAULT '',
+            last_completed_at  REAL,
+            extension_name  TEXT,
+            custom_system_prompt TEXT NOT NULL DEFAULT '',
+            mounted_workspaces TEXT NOT NULL DEFAULT '[]',
+            extra_tools     TEXT NOT NULL DEFAULT '[]',
+            extra_subscriptions TEXT NOT NULL DEFAULT '[]'
         );
         CREATE TABLE IF NOT EXISTS edges (
-            from_id TEXT,
-            to_id TEXT,
-            edge_type TEXT DEFAULT 'parent_of'
+            from_id TEXT NOT NULL,
+            to_id TEXT NOT NULL,
+            edge_type TEXT NOT NULL DEFAULT 'parent_of',
+            PRIMARY KEY (from_id, to_id, edge_type)
         );
         CREATE TABLE IF NOT EXISTS cursor_focus (
             id INTEGER PRIMARY KEY,
@@ -52,19 +68,26 @@ def _create_test_db(path: str) -> sqlite3.Connection:
             timestamp REAL
         );
         CREATE TABLE IF NOT EXISTS events (
-            event_id TEXT,
-            event_type TEXT,
-            timestamp REAL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            graph_id TEXT NOT NULL DEFAULT 'test',
+            event_type TEXT NOT NULL,
+            payload TEXT NOT NULL DEFAULT '{}',
+            timestamp REAL NOT NULL DEFAULT 0,
+            created_at REAL NOT NULL DEFAULT 0,
+            from_agent TEXT,
+            to_agent TEXT,
             correlation_id TEXT,
-            agent_id TEXT,
-            payload TEXT
+            tags TEXT
         );
         CREATE TABLE IF NOT EXISTS proposals (
-            id INTEGER PRIMARY KEY,
+            proposal_id TEXT PRIMARY KEY,
             agent_id TEXT,
+            old_source TEXT NOT NULL DEFAULT '',
+            new_source TEXT NOT NULL DEFAULT '',
+            diff TEXT NOT NULL DEFAULT '',
             status TEXT DEFAULT 'pending',
-            diff TEXT,
-            payload TEXT
+            created_at REAL NOT NULL DEFAULT 0,
+            file_path TEXT
         );
         CREATE TABLE IF NOT EXISTS command_queue (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,21 +116,25 @@ class TestGraphState:
     def test_read_snapshot_with_nodes(self, tmp_path: Path) -> None:
         db_path = str(tmp_path / "test.db")
         conn = _create_test_db(db_path)
-        conn.execute("INSERT INTO nodes (id, name, node_type, status) VALUES ('a', 'func_a', 'function', 'idle')")
-        conn.execute("INSERT INTO nodes (id, name, node_type, status) VALUES ('b', 'func_b', 'function', 'running')")
+        conn.execute("INSERT INTO nodes (node_id, name, node_type, status) VALUES ('a', 'func_a', 'function', 'idle')")
+        conn.execute(
+            "INSERT INTO nodes (node_id, name, node_type, status) VALUES ('b', 'func_b', 'function', 'running')"
+        )
         conn.commit()
 
         state = GraphState(db_path=db_path)
         snapshot = state.read_snapshot()
         assert len(snapshot.nodes) == 2
-        # id should be renamed to remora_id
+        # node_id should be renamed to remora_id
         assert snapshot.nodes[0]["remora_id"] == "a"
         state.close()
 
     def test_read_node(self, tmp_path: Path) -> None:
         db_path = str(tmp_path / "test.db")
         conn = _create_test_db(db_path)
-        conn.execute("INSERT INTO nodes (id, name, node_type, status) VALUES ('x', 'func_x', 'function', 'active')")
+        conn.execute(
+            "INSERT INTO nodes (node_id, name, node_type, status) VALUES ('x', 'func_x', 'function', 'active')"
+        )
         conn.commit()
 
         state = GraphState(db_path=db_path)
@@ -121,8 +148,8 @@ class TestGraphState:
     def test_read_edges_for_node(self, tmp_path: Path) -> None:
         db_path = str(tmp_path / "test.db")
         conn = _create_test_db(db_path)
-        conn.execute("INSERT INTO nodes (id, name) VALUES ('a', 'a')")
-        conn.execute("INSERT INTO nodes (id, name) VALUES ('b', 'b')")
+        conn.execute("INSERT INTO nodes (node_id, name) VALUES ('a', 'a')")
+        conn.execute("INSERT INTO nodes (node_id, name) VALUES ('b', 'b')")
         conn.execute("INSERT INTO edges (from_id, to_id, edge_type) VALUES ('a', 'b', 'parent_of')")
         conn.execute("INSERT INTO edges (from_id, to_id, edge_type) VALUES ('b', 'a', 'calls')")
         conn.commit()
@@ -155,9 +182,9 @@ class TestGraphState:
         db_path = str(tmp_path / "test.db")
         conn = _create_test_db(db_path)
         conn.execute(
-            "INSERT INTO events (event_id, event_type, timestamp, agent_id, payload) "
-            "VALUES ('e1', 'StatusChanged', ?, 'a', '{\"message\": \"hello\"}')",
-            (time.time(),),
+            "INSERT INTO events (graph_id, event_type, timestamp, created_at, from_agent, payload) "
+            "VALUES ('test', 'StatusChanged', ?, ?, 'a', '{\"message\": \"hello\"}')",
+            (time.time(), time.time()),
         )
         conn.commit()
 
@@ -182,9 +209,9 @@ class TestDBBridge:
     @pytest.mark.asyncio
     async def test_first_poll_detects_all_as_changed(self, setup) -> None:
         conn, state, layout, relay, bridge = setup
-        conn.execute("INSERT INTO nodes (id, name, status) VALUES ('a', 'a', 'idle')")
+        conn.execute("INSERT INTO nodes (node_id, name, status) VALUES ('a', 'a', 'idle')")
         conn.execute(
-            "INSERT INTO events (event_id, event_type, timestamp, agent_id, payload) VALUES ('e1', 'Test', 1.0, 'a', '{}')"
+            "INSERT INTO events (graph_id, event_type, timestamp, created_at, from_agent, payload) VALUES ('test', 'Test', 1.0, 1.0, 'a', '{}')"
         )
         conn.commit()
 
@@ -197,7 +224,7 @@ class TestDBBridge:
     @pytest.mark.asyncio
     async def test_second_poll_no_change_no_publish(self, setup) -> None:
         conn, state, layout, relay, bridge = setup
-        conn.execute("INSERT INTO nodes (id, name, status) VALUES ('a', 'a', 'idle')")
+        conn.execute("INSERT INTO nodes (node_id, name, status) VALUES ('a', 'a', 'idle')")
         conn.commit()
 
         await bridge._poll_once()
@@ -211,13 +238,13 @@ class TestDBBridge:
     @pytest.mark.asyncio
     async def test_node_added_triggers_topology(self, setup) -> None:
         conn, state, layout, relay, bridge = setup
-        conn.execute("INSERT INTO nodes (id, name, status) VALUES ('a', 'a', 'idle')")
+        conn.execute("INSERT INTO nodes (node_id, name, status) VALUES ('a', 'a', 'idle')")
         conn.commit()
         await bridge._poll_once()
         relay.published.clear()
 
         # Add a new node
-        conn.execute("INSERT INTO nodes (id, name, status) VALUES ('b', 'b', 'idle')")
+        conn.execute("INSERT INTO nodes (node_id, name, status) VALUES ('b', 'b', 'idle')")
         conn.commit()
         subjects = await bridge._poll_once()
         assert "graph.topology" in subjects
@@ -225,13 +252,13 @@ class TestDBBridge:
     @pytest.mark.asyncio
     async def test_status_change_triggers_status(self, setup) -> None:
         conn, state, layout, relay, bridge = setup
-        conn.execute("INSERT INTO nodes (id, name, status) VALUES ('a', 'a', 'idle')")
+        conn.execute("INSERT INTO nodes (node_id, name, status) VALUES ('a', 'a', 'idle')")
         conn.commit()
         await bridge._poll_once()
         relay.published.clear()
 
         # Change status
-        conn.execute("UPDATE nodes SET status = 'running' WHERE id = 'a'")
+        conn.execute("UPDATE nodes SET status = 'running' WHERE node_id = 'a'")
         conn.commit()
         subjects = await bridge._poll_once()
         assert "graph.status" in subjects
@@ -258,8 +285,8 @@ class TestDBBridge:
         relay.published.clear()
 
         conn.execute(
-            "INSERT INTO events (event_id, event_type, timestamp, agent_id, payload) "
-            "VALUES ('e1', 'Test', 1.0, 'a', '{}')"
+            "INSERT INTO events (graph_id, event_type, timestamp, created_at, from_agent, payload) "
+            "VALUES ('test', 'Test', 1.0, 1.0, 'a', '{}')"
         )
         conn.commit()
         subjects = await bridge._poll_once()
@@ -268,8 +295,8 @@ class TestDBBridge:
     @pytest.mark.asyncio
     async def test_layout_updated_on_topology_change(self, setup) -> None:
         conn, state, layout, relay, bridge = setup
-        conn.execute("INSERT INTO nodes (id, name, status, node_type) VALUES ('a', 'a', 'idle', 'function')")
-        conn.execute("INSERT INTO nodes (id, name, status, node_type) VALUES ('b', 'b', 'idle', 'function')")
+        conn.execute("INSERT INTO nodes (node_id, name, status, node_type) VALUES ('a', 'a', 'idle', 'function')")
+        conn.execute("INSERT INTO nodes (node_id, name, status, node_type) VALUES ('b', 'b', 'idle', 'function')")
         conn.execute("INSERT INTO edges (from_id, to_id, edge_type) VALUES ('a', 'b', 'calls')")
         conn.commit()
 
