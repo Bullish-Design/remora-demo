@@ -28,6 +28,9 @@ from graph.views.event_stream import render_event_list
 from graph.views.graph import render_graph
 from graph.views.shell import render_shell
 from graph.views.sidebar import render_sidebar_content
+from timeline.state import read_timeline_data
+from timeline.svg import render_timeline_svg
+from timeline.views import render_event_inspector, render_timeline_shell
 
 logger = logging.getLogger("remora.graph.app")
 
@@ -153,6 +156,72 @@ def post_command(state: GraphState):
     return handler
 
 
+# ── Timeline handler factories ──
+
+
+def timeline_index(state: GraphState):
+    """GET /timeline — Serve the full timeline HTML page."""
+
+    async def handler(c: Context, w: Writer) -> None:
+        conn = state._get_conn()
+        data = await asyncio.to_thread(read_timeline_data, conn)
+        w.html(render_timeline_shell(data))
+
+    return handler
+
+
+def timeline_subscribe(state: GraphState, relay: Relay):
+    """GET /timeline/subscribe — SSE endpoint for live timeline updates."""
+
+    async def handler(c: Context, w: Writer) -> None:
+        c("timeline.subscribe.connected")
+
+        # Send initial timeline SVG
+        conn = state._get_conn()
+        data = await asyncio.to_thread(read_timeline_data, conn)
+        w.patch(SafeString(render_timeline_svg(data)))
+
+        # Stream updates when events change
+        async for subject, _change_type in w.alive(relay.subscribe("graph.events")):
+            c("timeline.subscribe.event", {"subject": subject})
+            conn = state._get_conn()
+            data = await asyncio.to_thread(read_timeline_data, conn)
+            w.patch(SafeString(render_timeline_svg(data)))
+
+        c("timeline.subscribe.disconnected")
+
+    return handler
+
+
+def timeline_event_detail(state: GraphState):
+    """GET /timeline/event/* — Event inspector panel for a selected event."""
+
+    async def handler(c: Context, w: Writer) -> None:
+        event_id_str = c.req.tail
+        if not event_id_str:
+            w.html(SafeString(render_event_inspector(None)))
+            return
+
+        try:
+            event_id = int(event_id_str)
+        except ValueError:
+            w.html(SafeString(render_event_inspector(None)))
+            return
+
+        conn = state._get_conn()
+        conn.row_factory = __import__("sqlite3").Row
+        cursor = conn.execute(
+            "SELECT id as event_id, event_type, timestamp, from_agent, to_agent, "
+            "correlation_id, payload FROM events WHERE id = ?",
+            (event_id,),
+        )
+        row = cursor.fetchone()
+        event = dict(row) if row else None
+        w.html(SafeString(render_event_inspector(event)))
+
+    return handler
+
+
 # ── App factory ──
 
 
@@ -185,5 +254,10 @@ def create_app(
     app.get("/agent/*", agent_detail(state))
     app.get("/events", event_stream(state))
     app.post("/command", post_command(state))
+
+    # Timeline routes
+    app.get("/timeline", timeline_index(state))
+    app.get("/timeline/subscribe", timeline_subscribe(state, relay))
+    app.get("/timeline/event/*", timeline_event_detail(state))
 
     return app, bridge

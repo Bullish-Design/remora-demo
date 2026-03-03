@@ -78,6 +78,7 @@ def render_shell(
   <header class="header">
     <div class="header-title">Remora Graph</div>
     <div class="header-controls">
+      <a href="/timeline" style="color:#a6adc8;text-decoration:none;font-size:12px;padding:4px 8px;border-radius:4px">Timeline</a>
       <div class="header-status" id="connection-status">{node_count} nodes, {edge_count} edges</div>
     </div>
   </header>

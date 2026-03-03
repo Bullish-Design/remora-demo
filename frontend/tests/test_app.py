@@ -54,6 +54,31 @@ class TestAppModuleStructure:
         assert 'app.get("/events"' in source
         assert 'app.post("/command"' in source
 
+    def test_app_source_has_timeline_routes(self) -> None:
+        """Verify timeline routes are wired."""
+        from pathlib import Path
+
+        source = (Path(__file__).parent.parent / "graph" / "app.py").read_text()
+        assert 'app.get("/timeline"' in source
+        assert 'app.get("/timeline/subscribe"' in source
+        assert 'app.get("/timeline/event/*"' in source
+
+    def test_app_source_has_timeline_handlers(self) -> None:
+        """Verify timeline handler factories exist."""
+        from pathlib import Path
+
+        source = (Path(__file__).parent.parent / "graph" / "app.py").read_text()
+        assert "def timeline_index(" in source
+        assert "def timeline_subscribe(" in source
+        assert "def timeline_event_detail(" in source
+
+    def test_app_source_imports_timeline(self) -> None:
+        """App should import timeline view functions."""
+        from pathlib import Path
+
+        source = (Path(__file__).parent.parent / "graph" / "app.py").read_text()
+        assert "from timeline" in source
+
     def test_app_source_uses_safestring(self) -> None:
         """Views return strings — handlers must wrap in SafeString for w.patch."""
         from pathlib import Path
