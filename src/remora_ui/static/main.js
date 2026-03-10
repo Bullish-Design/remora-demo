@@ -4,12 +4,14 @@ const REMORA = window.REMORA_BASE_URL || "http://localhost:8765";
 const MAX_LOG_EVENTS = 50;
 const FLASH_DURATION_MS = 900;
 const REPLAY_GRAPH_ID = "swarm";
+const LARGE_GRAPH_NODE_THRESHOLD = 1200;
 
 let cy = null;
 let eventSource = null;
 let replayEvents = [];
 let replayIndex = 0;
 let isLiveMode = true;
+let isLargeGraphMode = false;
 
 const KNOWN_EVENT_TYPES = [
   "AgentStartEvent",
@@ -45,9 +47,14 @@ function initCytoscape() {
     elements: [],
     style: getCyStyles(),
     layout: { name: "preset" },
+    pixelRatio: 1,
+    textureOnViewport: true,
+    motionBlur: true,
     userZoomingEnabled: true,
     userPanningEnabled: true,
     boxSelectionEnabled: false,
+    hideEdgesOnViewport: true,
+    wheelSensitivity: 0.18,
     minZoom: 0.1,
     maxZoom: 5,
   });
@@ -84,7 +91,7 @@ async function loadGraph() {
     return;
   }
 
-  const nodes = Array.isArray(data.nodes) ? data.nodes : [];
+  let nodes = Array.isArray(data.nodes) ? data.nodes : [];
   const edges = Array.isArray(data.edges) ? data.edges : [];
 
   if (!nodes.length) {
@@ -93,6 +100,15 @@ async function loadGraph() {
       summary: "No graph nodes yet. Index code in remora and reload.",
     });
     return;
+  }
+
+  if (nodes.length >= LARGE_GRAPH_NODE_THRESHOLD) {
+    isLargeGraphMode = true;
+    nodes = flattenCompoundNodes(nodes);
+    addEventToLog({
+      type: "INFO",
+      summary: `Large graph mode: ${nodes.length} nodes, using flat grid + reduced labels.`,
+    });
   }
 
   cy.add(nodes);
@@ -104,10 +120,27 @@ async function loadGraph() {
     }
   });
 
+  if (isLargeGraphMode) {
+    applyLargeGraphStyling();
+  }
+
   runLayout();
 }
 
 function runLayout() {
+  if (isLargeGraphMode) {
+    const layout = cy.layout({
+      name: "grid",
+      avoidOverlap: true,
+      avoidOverlapPadding: 1,
+      spacingFactor: 1.05,
+      padding: 16,
+      fit: true,
+    });
+    layout.run();
+    return;
+  }
+
   const layout = cy.layout({
     name: "cose-bilkent",
     animate: false,
@@ -118,6 +151,42 @@ function runLayout() {
     padding: 30,
   });
   layout.run();
+}
+
+function flattenCompoundNodes(nodes) {
+  return nodes.map((node) => {
+    if (!node || typeof node !== "object") {
+      return node;
+    }
+    const sourceData = node.data && typeof node.data === "object" ? node.data : {};
+    const nextData = { ...sourceData };
+    delete nextData.parent;
+    return { ...node, data: nextData };
+  });
+}
+
+function applyLargeGraphStyling() {
+  if (!cy) {
+    return;
+  }
+  cy.style()
+    .selector("node")
+    .style({
+      label: "",
+      width: 9,
+      height: 9,
+      "text-outline-width": 0,
+      "font-size": 1,
+    })
+    .selector("node:selected")
+    .style({
+      label: "data(label)",
+      width: 14,
+      height: 14,
+      "font-size": "11px",
+      "text-outline-width": "2px",
+    })
+    .update();
 }
 
 function getCyStyles() {
