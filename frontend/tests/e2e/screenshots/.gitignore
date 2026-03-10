@@ -1,4 +1,0 @@
-# Ignore screenshots and videos captured during E2E test failures
-*.png
-*.webm
-!.gitignore

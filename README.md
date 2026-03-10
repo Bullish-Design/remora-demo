@@ -1,70 +1,58 @@
-# Remora Demo (Stario)
+# remora-ui (in remora-demo)
 
-This repo contains a fresh, two-process demo app:
+This repository now hosts a standalone **Remora Web UI** package that runs on Python 3.14 and connects to a running Remora server over HTTP/SSE.
 
-- **Frontend (Python 3.14)**: Stario UI at `http://127.0.0.1:8000`
-- **Backend (Python 3.13)**: Remora chat service at `http://127.0.0.1:8420`
+## Architecture
 
-The split is required because Remora and Stario target different Python versions.
+- Remora server (usually `http://127.0.0.1:8765`) provides:
+  - `GET /graph/data`
+  - `GET /events` (SSE)
+  - `GET /replay`
+  - `GET /companion/sidebar/{node_id}`
+  - `POST /companion/chat`
+  - `GET /companion/workspace/{node_id}`
+- This app (`remora-ui`) serves static UI assets on `http://127.0.0.1:8766`.
+- Browser loads UI from `:8766` and calls Remora API on `:8765` via CORS.
+
+## Features Implemented
+
+- Full-screen Cytoscape graph view with compound nodes
+- Live event log + node flash animations from `/events`
+- Node sidebar (markdown) from `/companion/sidebar/{node_id}`
+- Node chat from `/companion/chat`
+- Cursor-focus graph highlighting from `CursorFocusEvent`
+- Replay scrubber using `/replay?graph_id=swarm`
 
 ## Quick Start
 
-1. Create the backend environment (Python 3.13):
+1. Start Remora server (in the Remora repo):
 
 ```bash
-python3.13 -m venv .venv-backend
-source .venv-backend/bin/activate
-pip install -e backend
+devenv shell -- python scripts/start_webserver.py
 ```
 
-2. Create the frontend environment (Python 3.14):
+2. Start this UI server (in this repo):
 
 ```bash
-python3.14 -m venv .venv-frontend
-source .venv-frontend/bin/activate
-pip install -e frontend
+devenv shell -- uv sync --extra dev
+devenv shell -- remora-ui --remora-url http://localhost:8765
 ```
 
-3. Start both services (from their devenv shells):
+3. Open:
+
+```text
+http://localhost:8766
+```
+
+## Environment Variables
+
+- `REMORA_URL` (default `http://localhost:8765`)
+- `REMORA_UI_HOST` (default `127.0.0.1`)
+- `REMORA_UI_PORT` (default `8766`)
+
+## Local Testing
 
 ```bash
-# backend shell
-start-backend
-
-# frontend shell
-start-frontend
-```
-
-## Refactor Swarm Demo (Standalone)
-
-This demo uses the Remora service API (not the chat service) and a dedicated
-Stario frontend.
-
-```bash
-# backend shell (Python 3.13)
-start-refactor-backend
-
-# frontend shell (Python 3.14)
-start-refactor-frontend
-```
-
-Defaults:
-- Backend: `http://127.0.0.1:8421`
-- Frontend: `http://127.0.0.1:8001`
-
-Set `REFACTOR_BACKEND_URL` to point the frontend at a different backend.
-
-## Notes
-
-- The backend expects an OpenAI-compatible model server at `http://localhost:8000/v1`.
-- Sessions are in-memory and reset on restart.
-- Tool telemetry is streamed live into the UI tool log.
-
-## Repo Layout
-
-```
-backend/     # Remora chat service (Python 3.13)
-frontend/    # Stario UI (Python 3.14)
-scripts/     # Start scripts
-.context/    # Remora + Stario sources (local dependencies)
+devenv shell -- uv sync --extra dev
+devenv shell -- pytest -q
 ```

@@ -1,1 +1,0 @@
-"""Graph viewer package."""

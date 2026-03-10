@@ -1,35 +1,40 @@
 # CONTEXT — datastar-webapp-ui
 
 ## What just happened
-Completed full investigation + IMPLEMENTATION_GUIDE.md (detailed step-by-step guide for a
-junior developer to build the remora web UI as a standalone Python 3.14 repository).
+Completed a full repository rewrite of `remora-demo` to implement the datastar-webapp-ui
+guide as the new primary direction.
 
 ## Deliverables
-- `REPORT.md` — 735-line investigation report (architectural options, pros/cons)
-- `IMPLEMENTATION_GUIDE.md` — Complete build guide covering:
-  - 5 remora server-side changes (CORS, companion_registry, /graph/data, /companion/sidebar,
-    /companion/chat, /companion/workspace)
-  - New `remora-ui` repo setup (pyproject.toml, devenv.nix, Starlette app)
-  - Full HTML/CSS/JS for both modes (Cytoscape.js + Datastar + marked.js)
-  - Phase-by-phase implementation plan (P0 static graph → P5 replay scrubber)
-  - Testing checklist + pitfalls FAQ
+- New root Python package files:
+  - `pyproject.toml` (`remora-ui` package + CLI)
+  - `src/remora_ui/config.py` (runtime config/env loading)
+  - `src/remora_ui/app.py` (Starlette app + `/`, `/config.json`, `/static/*`)
+  - `src/remora_ui/static/index.html` (Datastar + Cytoscape + sidebar + replay controls)
+  - `src/remora_ui/static/style.css` (graph/event-log/sidebar/replay layout)
+  - `src/remora_ui/static/main.js` (graph load, SSE live pings, sidebar, chat, cursor focus,
+    replay scrubber)
+  - `tests/test_app.py` (server/static smoke tests)
+- Removed previous implementation artifacts:
+  - Entire `frontend/` tree
+  - Legacy architecture docs (`DEMO_ARCHITECTURE*.md`, `SWARM_ARCHITECTURE.md`)
+- Updated environment/docs:
+  - `README.md`, `devenv.nix`, `devenv.yaml`, `devenv.lock`
 
 ## Key technical decisions
-1. Standalone library serves only static HTML; browser makes CORS requests directly to remora
-2. CORS middleware added to remora's Starlette app (allow_origins for localhost:8766)
-3. Graph edges derived from AgentNode.callee_ids (no need for RemoraDB)
-4. Cytoscape compound nodes via AgentNode.parent_id (not separate parent_of edges)
-5. Datastar manages sidebar signals; vanilla JS EventSource for SSE pings; marked.js for markdown
-6. `window.__datastar_store` used for JS→Datastar signal interop
-7. companion_registry added to RemoraService as optional field + set_companion_registry() method
+1. Keep UI as a thin standalone Starlette host that serves static assets only.
+2. Browser talks directly to remora API endpoints over CORS (`/graph/data`, `/events`,
+   `/companion/*`, `/replay`).
+3. Use Cytoscape compound nodes via `parent` data and call edges from `callee_ids`.
+4. Use Datastar signal interop via `window.__datastar_store` with retry fallback.
+5. Implement all roadmap phases (P0-P5) in one integrated `main.js` flow.
 
-## Files to modify in remora repo (not yet done — awaiting implementation)
-- src/remora/adapters/starlette.py — CORS + 4 new routes
-- src/remora/service/api.py — companion_registry field + property
+## Files to modify in remora repo
+Not part of this repo rewrite; expected to already be present in the remora library copy under
+`.context/remora` and in the actual remora runtime used by the UI.
 
 ## Status
-Documentation phase complete. Implementation not started.
+Implementation complete in this repository and validated with local tests.
 
-## Next step (if user wants to proceed)
-Start P0: add CORS + /graph/data to remora, create the remora-ui repo, get the static graph
-rendering in the browser.
+## Next step
+Run against a live remora server and verify end-to-end behavior in browser:
+graph render, live SSE flashes, sidebar markdown, chat replies, cursor focus highlight, and replay scrubber.

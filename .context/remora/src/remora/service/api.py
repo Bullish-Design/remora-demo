@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from remora.core.config import Config, load_config
 from remora.core.events.event_bus import EventBus
@@ -27,6 +28,11 @@ from remora.service.handlers import (
 from remora.ui.projector import UiStateProjector
 from remora.utils import PathLike
 
+if TYPE_CHECKING:
+    from remora.companion.registry import NodeAgentRegistry
+    from remora.core.agents.cairn_bridge import CairnWorkspaceService
+    from remora.core.events.subscriptions import SubscriptionRegistry
+
 
 def _resolve_project_root(project_root: PathLike | None) -> Path:
     if project_root is None:
@@ -45,7 +51,7 @@ class RemoraService:
         config_path: PathLike | None = None,
         project_root: PathLike | None = None,
         enable_event_store: bool = True,
-    ) -> "RemoraService":
+    ) -> RemoraService:
         resolved_config = config or load_config(config_path)
         resolved_root = _resolve_project_root(project_root)
         event_bus = EventBus()
@@ -75,6 +81,7 @@ class RemoraService:
         projector: UiStateProjector | None = None,
         subscriptions: SubscriptionRegistry | None = None,
         workspace_service: CairnWorkspaceService | None = None,
+        companion_registry: NodeAgentRegistry | None = None,
     ) -> None:
         self._config = config
         self._project_root = project_root
@@ -83,6 +90,7 @@ class RemoraService:
         self._projector = projector or UiStateProjector()
         self._subscriptions = subscriptions
         self._workspace_service = workspace_service
+        self._companion_registry = companion_registry
         self._bundle_default = resolve_bundle_default(self._config)
         self._event_bus.subscribe_all(self._projector.record)
 
@@ -148,6 +156,15 @@ class RemoraService:
     def subscription_registry(self) -> SubscriptionRegistry | None:
         """Return the raw SubscriptionRegistry instance."""
         return self._subscriptions
+
+    @property
+    def companion_registry(self) -> NodeAgentRegistry | None:
+        """Return the optional NodeAgentRegistry instance."""
+        return self._companion_registry
+
+    def set_companion_registry(self, registry: NodeAgentRegistry) -> None:
+        """Wire in the companion registry after construction."""
+        self._companion_registry = registry
 
     def get_workspace_service(self) -> CairnWorkspaceService | None:
         return self._workspace_service

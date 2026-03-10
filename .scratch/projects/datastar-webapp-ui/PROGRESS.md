@@ -18,13 +18,13 @@
 |------|--------|
 | Write IMPLEMENTATION_GUIDE.md | done |
 
-## Phase: Implementation (not started)
+## Phase: Implementation (completed in remora-demo rewrite)
 
 | Task | Status |
 |------|--------|
-| P0: GET /graph/data endpoint + static Cytoscape render | pending |
-| P1: Live event pings (SSE → flashClass, event log) | pending |
-| P2: Mode 1 sidebar panel + companion HTTP endpoints | pending |
-| P3: Chat streaming SSE | pending |
-| P4: Neovim cursor sync → graph highlight | pending |
-| P5: EventStore replay scrubber | pending |
+| P0: GET /graph/data endpoint + static Cytoscape render | done |
+| P1: Live event pings (SSE → flashClass, event log) | done |
+| P2: Mode 1 sidebar panel + companion HTTP endpoints | done |
+| P3: Chat (non-streaming HTTP) | done |
+| P4: Neovim cursor sync → graph highlight | done |
+| P5: EventStore replay scrubber | done |

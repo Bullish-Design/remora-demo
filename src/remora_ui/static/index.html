@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remora Swarm View</title>
+
+  <script
+    type="module"
+    src="https://cdn.jsdelivr.net/npm/@sudodevnull/datastar@1.0.0-RC.7/dist/datastar.min.js"
+  ></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape-cose-bilkent@4.1.0/cytoscape-cose-bilkent.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js"></script>
+
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body
+  data-signals='{
+    "selectedNodeId": "",
+    "sidebarOpen": false,
+    "chatMessage": "",
+    "sidebarLoading": false,
+    "chatLoading": false
+  }'
+>
+  <div id="cy"></div>
+
+  <div id="replay-controls">
+    <button id="replay-play-pause" title="Toggle live replay">||</button>
+    <input id="replay-scrubber" type="range" min="0" max="0" value="0" step="1">
+    <span id="replay-timestamp">Live</span>
+  </div>
+
+  <div id="event-log">
+    <div class="event-log-header">Live Events</div>
+    <ul id="event-list"></ul>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <span id="sidebar-node-label">-</span>
+      <button id="sidebar-close" title="Back to graph">x</button>
+    </div>
+
+    <div id="sidebar-content" data-show="!$sidebarLoading"></div>
+    <div id="sidebar-loading" data-show="$sidebarLoading" class="loading">Loading...</div>
+
+    <div id="chat-area">
+      <div id="chat-history"></div>
+
+      <form id="chat-form">
+        <input
+          id="chat-input"
+          type="text"
+          data-bind="chatMessage"
+          placeholder="Ask the agent..."
+          autocomplete="off"
+        >
+        <button id="chat-send" type="submit" data-show="!$chatLoading">Send</button>
+        <span id="chat-loading" data-show="$chatLoading" class="loading">Thinking...</span>
+      </form>
+    </div>
+  </aside>
+
+  <script>
+    window.REMORA_BASE_URL = "__REMORA_BASE_URL__";
+  </script>
+  <script src="/static/main.js"></script>
+</body>
+</html>
