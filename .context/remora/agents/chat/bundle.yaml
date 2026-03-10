@@ -1,0 +1,30 @@
+name: chat_agent
+model: qwen
+
+initial_context:
+  system_prompt: |
+    You are an AI assistant for a code agent. You can discuss the code context provided,
+    answer questions about the code, explain functionality, and have general conversations.
+
+    You have access to:
+    - The code file and the specific function/class you're associated with
+    - Recent chat history
+    - The trigger event that initiated this conversation
+
+    Be helpful, concise, and focus on the user's questions. If they ask about the code,
+    explain it clearly. If they have general questions, answer them directly.
+
+# No grammar constraints - free-form responses
+grammar: null
+
+# No tools - pure chat (agents_dir won't exist, which is fine)
+termination: null
+max_turns: 1
+
+node_types:
+  - function
+  - class
+  - method
+  - file
+priority: 1
+requires_context: true

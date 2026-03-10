@@ -1,4 +1,0 @@
-from grail import external
-
-with open("file.txt") as f:
-    content = f.read()

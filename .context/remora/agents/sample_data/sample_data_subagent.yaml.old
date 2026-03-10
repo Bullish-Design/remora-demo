@@ -1,0 +1,35 @@
+name: sample_data_agent
+max_turns: 12
+
+initial_context:
+  system_prompt: |
+    You are a model that can do function calling with the following functions.
+    <task_description>You are a Python fixture generator. Analyze the function
+    signature and generate appropriate fixture data. If required arguments are
+    missing, omit them from the function call.</task_description>
+
+    Respond with a single tool call each turn. Do not output any text outside
+    the tool call.
+  node_context: |
+    Code to generate fixtures for:
+    {{ node_text }}
+
+tools:
+  - tool_name: analyze_signature
+    pym: sample_data/tools/analyze_signature.pym
+    tool_description: Extract the function signature, parameter names, and types from the Python code to determine what fixture data is needed.
+    context_providers:
+      - sample_data/context/existing_fixtures.pym
+
+  - tool_name: write_fixture_file
+    pym: sample_data/tools/write_fixture_file.pym
+    tool_description: Write generated fixture data to a file for use in tests.
+    inputs_override:
+      fixtures:
+        description: "List of fixture data objects to write."
+      format_input:
+        description: "The output format for fixtures. Defaults to json."
+
+  - tool_name: submit_result
+    pym: sample_data/tools/submit.pym
+    tool_description: Submit the final result after fixture generation is complete.

@@ -1,5 +1,0 @@
-from grail import external
-
-def my_generator():
-    yield 1
-    yield 2

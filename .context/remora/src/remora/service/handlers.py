@@ -1,0 +1,215 @@
+"""Framework-agnostic service handlers for the Remora API."""
+
+from __future__ import annotations
+
+import json
+import logging
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from remora.core.config import Config
+from remora.core.events.agent_events import HumanInputResponseEvent
+from remora.core.events.event_bus import EventBus
+from remora.core.events.interaction_events import AgentMessageEvent, ContentChangedEvent
+from remora.core.store.event_store import EventStore
+from remora.models import ConfigSnapshot, InputResponse
+from remora.service.datastar import render_patch, render_shell
+from remora.ui.projector import UiStateProjector, normalize_event
+from remora.ui.view import render_dashboard
+from remora.utils import PathResolver
+
+if TYPE_CHECKING:
+    from remora.core.events.subscriptions import SubscriptionRegistry
+    from remora.core.agents.cairn_bridge import CairnWorkspaceService
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class ServiceDeps:
+    event_bus: EventBus
+    config: Config
+    project_root: Path
+    projector: UiStateProjector
+    event_store: EventStore | None = None
+    subscriptions: "SubscriptionRegistry | None" = None
+    workspace_service: "CairnWorkspaceService | None" = None
+
+
+def build_default_runtime(
+    *,
+    config: Config,
+    project_root: Path,
+    event_bus: EventBus,
+    enable_event_store: bool = True,
+) -> tuple[EventStore | None, "SubscriptionRegistry", "CairnWorkspaceService"]:
+    """Build default event/subscription/workspace services for RemoraService."""
+    from remora.core.agents.cairn_bridge import CairnWorkspaceService
+    from remora.core.code.projections import NodeProjection
+    from remora.core.events.subscriptions import SubscriptionRegistry
+    from remora.extensions import extension_matches, load_extensions
+
+    swarm_root = project_root / ".remora"
+    subscriptions = SubscriptionRegistry(swarm_root / "subscriptions.db")
+
+    event_store: EventStore | None = None
+    if enable_event_store:
+        extensions = load_extensions(swarm_root / "models")
+        projection = NodeProjection(
+            extension_matcher=extension_matches,
+            extension_configs=extensions,
+        )
+        event_store = EventStore(
+            swarm_root / "events" / "events.db",
+            subscriptions=subscriptions,
+            projection=projection,
+        )
+        event_store.set_subscriptions(subscriptions)
+        event_store.set_event_bus(event_bus)
+
+    workspace_service = CairnWorkspaceService(
+        config=config,
+        swarm_root=swarm_root,
+        project_root=project_root,
+    )
+
+    return event_store, subscriptions, workspace_service
+
+
+def resolve_bundle_default(config: Config) -> str:
+    snapshot = ConfigSnapshot.from_config(config)
+    mapping = snapshot.bundles.get("mapping", {})
+    if isinstance(mapping, dict) and mapping:
+        return next(iter(mapping))
+    return ""
+
+
+def render_index_html(projector: UiStateProjector, bundle_default: str) -> str:
+    state = projector.snapshot()
+    return render_shell(render_dashboard(state, bundle_default=bundle_default))
+
+
+def render_state_patch(projector: UiStateProjector, bundle_default: str) -> str:
+    return render_patch(projector.snapshot(), bundle_default=bundle_default)
+
+
+def render_event_sse(event: Any) -> str:
+    envelope = normalize_event(event)
+    data = json.dumps(envelope, default=str)
+    event_name = envelope.get("type", "event")
+    return f"event: {event_name}\ndata: {data}\n\n"
+
+
+async def handle_input(request_id: str, response: str, deps: ServiceDeps) -> InputResponse:
+    if not request_id or not response:
+        raise ValueError("request_id and response are required")
+    event = HumanInputResponseEvent(request_id=request_id, response=response)
+    await deps.event_bus.emit(event)
+    return InputResponse(request_id=request_id)
+
+
+def handle_config_snapshot(deps: ServiceDeps) -> ConfigSnapshot:
+    return ConfigSnapshot.from_config(deps.config)
+
+
+def handle_ui_snapshot(deps: ServiceDeps) -> dict[str, Any]:
+    return deps.projector.snapshot()
+
+
+def _normalize_target(target_path: str, project_root: Path) -> Path:
+    resolver = PathResolver(project_root)
+    path_obj = Path(target_path)
+    if path_obj.is_absolute():
+        resolved = path_obj.resolve()
+    else:
+        resolved = (project_root / path_obj).resolve()
+    if not resolver.is_within_project(resolved):
+        raise ValueError("target_path must be within the service project root")
+    if not resolved.exists():
+        raise ValueError("target_path does not exist")
+    return resolved
+
+
+async def handle_swarm_emit(request: Any, deps: ServiceDeps) -> dict[str, Any]:
+    """Handle swarm.emit - emit an event to the swarm."""
+    if deps.event_store is None:
+        raise ValueError("event store not configured")
+
+    event_type = getattr(request, "event_type", None)
+    data = getattr(request, "data", {}) or {}
+
+    if event_type == "AgentMessageEvent":
+        event = AgentMessageEvent(
+            from_agent=data.get("from_agent", "api"),
+            to_agent=data.get("to_agent", ""),
+            content=data.get("content", ""),
+            tags=tuple(data.get("tags", ())),
+        )
+    elif event_type == "ContentChangedEvent":
+        from remora.utils import to_project_relative
+
+        path = to_project_relative(deps.project_root, data.get("path", ""))
+        event = ContentChangedEvent(path=path, diff=data.get("diff"))
+    else:
+        raise ValueError(f"Unknown event type: {event_type}")
+
+    event_id = await deps.event_store.append(deps.config.swarm_id, event)
+    return {"event_id": event_id}
+
+
+async def handle_swarm_list_agents(deps: ServiceDeps) -> list[dict[str, Any]]:
+    """List all agents in the swarm."""
+    if deps.event_store is None:
+        raise ValueError("event store not configured")
+    agents = await deps.event_store.nodes.list_nodes()
+    return [agent.model_dump() for agent in agents]
+
+
+async def handle_swarm_get_agent(agent_id: str, deps: ServiceDeps) -> dict[str, Any]:
+    """Get a specific agent."""
+    if deps.event_store is None:
+        raise ValueError("event store not configured")
+    agent = await deps.event_store.nodes.get_node(agent_id)
+    if agent is None:
+        raise ValueError("agent not found")
+    return agent.model_dump()
+
+
+async def handle_swarm_get_subscriptions(agent_id: str, deps: ServiceDeps) -> list[dict[str, Any]]:
+    """Get subscriptions for an agent."""
+    if deps.subscriptions is None:
+        raise ValueError("subscriptions not configured")
+    subs = await deps.subscriptions.get_subscriptions(agent_id)
+    return [
+        {
+            "id": sub.id,
+            "pattern": {
+                "event_types": sub.pattern.event_types,
+                "from_agents": sub.pattern.from_agents,
+                "to_agent": sub.pattern.to_agent,
+                "path_glob": sub.pattern.path_glob,
+                "tags": sub.pattern.tags,
+            },
+            "is_default": sub.is_default,
+        }
+        for sub in subs
+    ]
+
+
+__all__ = [
+    "ServiceDeps",
+    "build_default_runtime",
+    "resolve_bundle_default",
+    "render_index_html",
+    "render_state_patch",
+    "render_event_sse",
+    "_normalize_target",
+    "handle_config_snapshot",
+    "handle_input",
+    "handle_ui_snapshot",
+    "handle_swarm_emit",
+    "handle_swarm_list_agents",
+    "handle_swarm_get_agent",
+    "handle_swarm_get_subscriptions",
+]
